@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -19,17 +19,18 @@ export const metadata: Metadata = {
   description:
     "AI-powered business assistant for contractors — estimates, change orders, and invoices from natural language.",
   manifest: "/manifest.json",
-  themeColor: "#1e293b",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "ConstructAI",
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#1e293b",
 };
 
 export default function RootLayout({

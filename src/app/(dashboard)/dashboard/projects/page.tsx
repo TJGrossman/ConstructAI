@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { Plus, FolderOpen } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 const statusColors: Record<string, string> = {
   active: "bg-green-100 text-green-700",
   completed: "bg-secondary text-secondary-foreground",

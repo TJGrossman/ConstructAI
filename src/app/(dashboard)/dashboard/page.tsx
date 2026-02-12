@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { FolderOpen, FileText, Receipt, Plus } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id: string })?.id;

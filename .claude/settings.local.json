@@ -10,7 +10,12 @@
       "Bash(npx next build)",
       "Bash(brew list:*)",
       "Bash(pg_isready:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nConstructAI — full application implementation\n\nAll 8 phases implemented:\n- Auth \\(NextAuth.js with credentials\\)\n- AI-powered service catalog onboarding\n- Project management with conversational estimates\n- Change orders with cost impact tracking\n- Invoice generation from chat\n- Customer portal \\(shareable, no-auth\\)\n- Audit trail & history\n- Voice input \\(Web Speech API\\)\n- PWA support for mobile install\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix Vercel build: add force-dynamic to all API routes and server pages\n\nPrevents Prisma from trying to connect to the database during the\nstatic build step. Also moves viewport/themeColor to proper export.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }

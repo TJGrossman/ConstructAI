@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { HardHat } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 export default async function CustomerPortalPage({
   params,
 }: {

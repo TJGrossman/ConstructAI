@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { calculateCostImpact } from "@/lib/ai/parsers/changeOrder";
 import { LineItem } from "@/lib/ai/processor";
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {

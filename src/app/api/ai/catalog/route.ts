@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { generateCatalog } from "@/lib/ai/processor";
 import { validateCatalogItems } from "@/lib/ai/parsers/catalog";
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
