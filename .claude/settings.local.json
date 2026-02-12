@@ -15,7 +15,8 @@
       "Bash(git push:*)",
       "Bash(git remote set-url:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix Vercel build: add force-dynamic to all API routes and server pages\n\nPrevents Prisma from trying to connect to the database during the\nstatic build step. Also moves viewport/themeColor to proper export.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix Vercel build: add force-dynamic to all API routes and server pages\n\nPrevents Prisma from trying to connect to the database during the\nstatic build step. Also moves viewport/themeColor to proper export.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)"
     ]
   }
 }
