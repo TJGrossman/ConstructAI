@@ -6,7 +6,7 @@ export default function NotFound() {
       <div className="mx-auto max-w-md space-y-4 p-6 text-center">
         <h2 className="text-2xl font-bold">404 - Page Not Found</h2>
         <p className="text-muted-foreground">
-          The page you're looking for doesn't exist.
+          The page you&apos;re looking for doesn&apos;t exist.
         </p>
         <Link
           href="/dashboard"

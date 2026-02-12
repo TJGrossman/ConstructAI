@@ -86,7 +86,7 @@ export function useVoiceRecording({
       recognition.start();
       recognitionRef.current = recognition;
       setIsRecording(true);
-    } catch (err) {
+    } catch {
       setError("Failed to start recording");
       setIsRecording(false);
     }

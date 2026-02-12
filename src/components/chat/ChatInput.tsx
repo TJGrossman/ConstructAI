@@ -18,10 +18,9 @@ export function ChatInput({
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { isRecording, transcript, isSupported, toggleRecording } =
-    useVoiceRecording({
-      onTranscriptChange: setMessage,
-    });
+  const { isRecording, isSupported, toggleRecording } = useVoiceRecording({
+    onTranscriptChange: setMessage,
+  });
 
   useEffect(() => {
     if (textareaRef.current) {

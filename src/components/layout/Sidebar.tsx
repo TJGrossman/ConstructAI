@@ -33,6 +33,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
     if (onClose) {
       onClose();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   // Handle Escape key
