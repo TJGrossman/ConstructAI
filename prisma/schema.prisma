@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  passwordHash   String
+  companyName    String?
+  phone          String?
+  licenseNumber  String?
+  defaultMarkup  Decimal  @default(0) @db.Decimal(5, 2)
+  defaultTaxRate Decimal  @default(0) @db.Decimal(5, 2)
+  paymentTerms   String   @default("Net 30")
+  onboardingDone Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  catalogItems ServiceCatalogItem[]
+  projects     Project[]
+}
+
+model ServiceCatalogItem {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  category    String
+  unit        String
+  defaultRate Decimal  @db.Decimal(10, 2)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, category])
+}
+
+model Customer {
+  id        String    @id @default(cuid())
+  userId    String
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  createdAt DateTime  @default(now())
+  projects  Project[]
+
+  @@index([userId])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id])
+  name        String
+  address     String?
+  description String?
+  status      String   @default("active")
+  shareToken  String   @unique @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  estimates     Estimate[]
+  changeOrders  ChangeOrder[]
+  invoices      Invoice[]
+  conversations Conversation[]
+  auditLogs     AuditLog[]
+
+  @@index([userId])
+}
+
+model Estimate {
+  id         String    @id @default(cuid())
+  projectId  String
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  number     Int
+  title      String
+  status     String    @default("draft")
+  subtotal   Decimal   @default(0) @db.Decimal(12, 2)
+  taxRate    Decimal   @default(0) @db.Decimal(5, 2)
+  taxAmount  Decimal   @default(0) @db.Decimal(12, 2)
+  total      Decimal   @default(0) @db.Decimal(12, 2)
+  notes      String?
+  sentAt     DateTime?
+  approvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  lineItems    EstimateLineItem[]
+  changeOrders ChangeOrder[]
+
+  @@index([projectId])
+}
+
+model EstimateLineItem {
+  id            String   @id @default(cuid())
+  estimateId    String
+  estimate      Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  catalogItemId String?
+  description   String
+  category      String?
+  quantity      Decimal  @db.Decimal(10, 2)
+  unit          String
+  unitPrice     Decimal  @db.Decimal(10, 2)
+  total         Decimal  @db.Decimal(12, 2)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@index([estimateId])
+}
+
+model ChangeOrder {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  estimateId  String
+  estimate    Estimate  @relation(fields: [estimateId], references: [id])
+  number      Int
+  title       String
+  description String
+  status      String    @default("draft")
+  costImpact  Decimal   @db.Decimal(12, 2)
+  approvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  lineItems ChangeOrderLineItem[]
+
+  @@index([projectId])
+  @@index([estimateId])
+}
+
+model ChangeOrderLineItem {
+  id            String      @id @default(cuid())
+  changeOrderId String
+  changeOrder   ChangeOrder @relation(fields: [changeOrderId], references: [id], onDelete: Cascade)
+  action        String
+  description   String
+  originalDesc  String?
+  quantity      Decimal     @db.Decimal(10, 2)
+  unit          String
+  unitPrice     Decimal     @db.Decimal(10, 2)
+  total         Decimal     @db.Decimal(12, 2)
+  createdAt     DateTime    @default(now())
+}
+
+model Invoice {
+  id        String    @id @default(cuid())
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  number    Int
+  status    String    @default("draft")
+  subtotal  Decimal   @default(0) @db.Decimal(12, 2)
+  taxRate   Decimal   @default(0) @db.Decimal(5, 2)
+  taxAmount Decimal   @default(0) @db.Decimal(12, 2)
+  total     Decimal   @default(0) @db.Decimal(12, 2)
+  dueDate   DateTime?
+  paidAt    DateTime?
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  lineItems InvoiceLineItem[]
+
+  @@index([projectId])
+}
+
+model InvoiceLineItem {
+  id                 String   @id @default(cuid())
+  invoiceId          String
+  invoice            Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  estimateLineItemId String?
+  description        String
+  quantity           Decimal  @db.Decimal(10, 2)
+  unit               String
+  unitPrice          Decimal  @db.Decimal(10, 2)
+  total              Decimal  @db.Decimal(12, 2)
+  sortOrder          Int      @default(0)
+  createdAt          DateTime @default(now())
+
+  @@index([invoiceId])
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  channel   String    @default("web")
+  createdAt DateTime  @default(now())
+  messages  Message[]
+
+  @@index([projectId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  metadata       Json?
+  channel        String       @default("web")
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId     String
+  action     String
+  entityType String
+  entityId   String
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([projectId])
+  @@index([entityType, entityId])
+}
