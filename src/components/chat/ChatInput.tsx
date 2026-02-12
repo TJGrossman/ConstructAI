@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, Mic, MicOff } from "lucide-react";
+import { useVoiceRecording } from "@/hooks/useVoiceRecording";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -15,9 +16,12 @@ export function ChatInput({
   placeholder = "Describe the work...",
 }: ChatInputProps) {
   const [message, setMessage] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+  const { isRecording, transcript, isSupported, toggleRecording } =
+    useVoiceRecording({
+      onTranscriptChange: setMessage,
+    });
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -41,41 +45,6 @@ export function ChatInput({
     }
   };
 
-  const toggleRecording = () => {
-    if (isRecording) {
-      recognitionRef.current?.stop();
-      setIsRecording(false);
-      return;
-    }
-
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      let transcript = "";
-      for (let i = 0; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
-      }
-      setMessage(transcript);
-    };
-
-    recognition.onerror = () => setIsRecording(false);
-    recognition.onend = () => setIsRecording(false);
-
-    recognition.start();
-    recognitionRef.current = recognition;
-    setIsRecording(true);
-  };
-
-  const hasSpeechAPI =
-    typeof window !== "undefined" &&
-    (window.SpeechRecognition || window.webkitSpeechRecognition);
-
   return (
     <div className="border-t bg-background p-4">
       <div className="flex items-end gap-2">
@@ -87,17 +56,19 @@ export function ChatInput({
           placeholder={placeholder}
           disabled={disabled}
           rows={1}
-          className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
         />
-        {hasSpeechAPI && (
+        {isSupported && (
           <button
             onClick={toggleRecording}
-            className={`inline-flex h-10 w-10 items-center justify-center rounded-md border text-sm transition-colors ${
+            disabled={disabled}
+            className={`inline-flex h-11 w-11 items-center justify-center rounded-md border text-sm transition-colors ${
               isRecording
                 ? "border-destructive bg-destructive text-destructive-foreground"
                 : "border-input hover:bg-accent"
             }`}
             type="button"
+            aria-label={isRecording ? "Stop recording" : "Start recording"}
           >
             {isRecording ? (
               <MicOff className="h-4 w-4" />
@@ -109,8 +80,9 @@ export function ChatInput({
         <button
           onClick={handleSubmit}
           disabled={!message.trim() || disabled}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
           type="button"
+          aria-label="Send message"
         >
           <Send className="h-4 w-4" />
         </button>

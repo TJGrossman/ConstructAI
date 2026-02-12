@@ -25,6 +25,28 @@
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
   }
+
+  .dark {
+    --background: 222.2 84% 4.9%;        /* Deep slate (almost black) */
+    --foreground: 210 40% 98%;           /* Off-white text */
+    --card: 217.2 32.6% 17.5%;           /* Dark slate cards */
+    --card-foreground: 210 40% 98%;      /* Light text on cards */
+    --popover: 222.2 84% 4.9%;           /* Match background */
+    --popover-foreground: 210 40% 98%;   /* Light text */
+    --primary: 38 92% 50%;               /* Construction orange (safety vest) */
+    --primary-foreground: 222.2 47.4% 11.2%; /* Dark text on orange */
+    --secondary: 217.2 32.6% 17.5%;      /* Subtle dark slate */
+    --secondary-foreground: 210 40% 98%; /* Light text */
+    --muted: 217.2 32.6% 17.5%;          /* Muted dark */
+    --muted-foreground: 215 20.2% 65.1%; /* Muted light gray */
+    --accent: 38 92% 50%;                /* Accent orange */
+    --accent-foreground: 222.2 47.4% 11.2%; /* Dark on accent */
+    --destructive: 0 72% 51%;            /* Danger red */
+    --destructive-foreground: 210 40% 98%; /* Light on red */
+    --border: 217.2 32.6% 27.5%;         /* Subtle borders */
+    --input: 217.2 32.6% 27.5%;          /* Input borders */
+    --ring: 38 92% 50%;                  /* Orange focus ring */
+  }
 }
 
 @layer base {

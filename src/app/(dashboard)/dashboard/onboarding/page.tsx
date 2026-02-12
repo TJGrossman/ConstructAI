@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus, Trash2, Check } from "lucide-react";
+import { Loader2, Plus, Trash2, Check, Mic, MicOff } from "lucide-react";
+import { useVoiceRecording } from "@/hooks/useVoiceRecording";
 
 interface CatalogItem {
   name: string;
@@ -27,6 +28,10 @@ export default function OnboardingPage() {
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  const { isRecording, isSupported, toggleRecording } = useVoiceRecording({
+    onTranscriptChange: setDescription,
+  });
 
   const handleGenerate = async () => {
     if (!description.trim()) return;
@@ -91,13 +96,42 @@ export default function OnboardingPage() {
           Describe the services you offer, including your rates. AI will create a structured
           catalog you can edit.
         </p>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={8}
-          placeholder="Example: I do kitchen and bathroom remodels. I charge $75/hr for demo, $95/hr for tile work, cabinets are usually $150 per linear foot installed, countertops are $85 per square foot for granite..."
-          className="mt-6 w-full resize-none rounded-md border border-input bg-background px-4 py-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
+        <div className="relative mt-6">
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={8}
+            placeholder="Example: I do kitchen and bathroom remodels. I charge $75/hr for demo, $95/hr for tile work, cabinets are usually $150 per linear foot installed, countertops are $85 per square foot for granite..."
+            className={`w-full resize-none rounded-md border bg-background px-4 py-3 text-base placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:text-sm ${
+              isRecording
+                ? "border-destructive ring-2 ring-destructive/50"
+                : "border-input"
+            }`}
+          />
+          {isSupported && (
+            <button
+              onClick={toggleRecording}
+              className={`absolute bottom-3 right-3 inline-flex h-11 w-11 items-center justify-center rounded-md border text-sm transition-colors ${
+                isRecording
+                  ? "border-destructive bg-destructive text-destructive-foreground"
+                  : "border-input bg-background hover:bg-accent"
+              }`}
+              type="button"
+              aria-label={isRecording ? "Stop recording" : "Start recording"}
+            >
+              {isRecording ? (
+                <MicOff className="h-5 w-5 animate-pulse" />
+              ) : (
+                <Mic className="h-5 w-5" />
+              )}
+            </button>
+          )}
+        </div>
+        {isRecording && (
+          <p className="mt-2 text-sm text-destructive">
+            🎙️ Recording... Speak naturally, and your words will appear above.
+          </p>
+        )}
         <button
           onClick={handleGenerate}
           disabled={!description.trim() || isGenerating}
