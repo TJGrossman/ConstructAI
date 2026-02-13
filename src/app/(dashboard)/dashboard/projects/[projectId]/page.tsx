@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, ChevronDown, ChevronRight } from "lucide-react";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -94,11 +94,33 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("chat");
+  const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
 
   const fetchProject = useCallback(async () => {
     try {
       const res = await fetch(`/api/projects/${projectId}`);
-      if (res.ok) setProject(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setProject(data);
+        // Expand all parent items by default
+        const parentIds = new Set<string>();
+        data.estimates?.forEach((est: Estimate) => {
+          est.lineItems?.forEach((item: LineItem) => {
+            if (!item.parentId) parentIds.add(item.id);
+          });
+        });
+        data.changeOrders?.forEach((co: ChangeOrder) => {
+          co.lineItems?.forEach((item: LineItem) => {
+            if (!item.parentId) parentIds.add(item.id);
+          });
+        });
+        data.invoices?.forEach((inv: Invoice) => {
+          inv.lineItems?.forEach((item: LineItem) => {
+            if (!item.parentId) parentIds.add(item.id);
+          });
+        });
+        setExpandedParents(parentIds);
+      }
     } finally {
       setLoading(false);
     }
@@ -107,6 +129,18 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     fetchProject();
   }, [fetchProject]);
+
+  const toggleParent = (parentId: string) => {
+    setExpandedParents((prev) => {
+      const next = new Set(prev);
+      if (next.has(parentId)) {
+        next.delete(parentId);
+      } else {
+        next.add(parentId);
+      }
+      return next;
+    });
+  };
 
   const updateStatus = async (
     type: "estimates" | "invoices",
@@ -259,13 +293,34 @@ export default function ProjectDetailPage() {
                       {est.lineItems.map((item) => {
                         const isParent = !item.parentId;
                         const isChild = !!item.parentId;
+                        const isExpanded = expandedParents.has(item.id);
+
+                        // Hide child items if their parent is collapsed
+                        if (isChild && !expandedParents.has(item.parentId || "")) {
+                          return null;
+                        }
+
                         return (
                           <tr
                             key={item.id}
                             className={`border-b ${isParent ? "bg-muted/30 font-semibold" : ""}`}
                           >
                             <td className={`px-4 py-2 ${isChild ? "pl-8" : ""}`}>
-                              {item.description}
+                              <div className="flex items-center gap-2">
+                                {isParent && (
+                                  <button
+                                    onClick={() => toggleParent(item.id)}
+                                    className="text-muted-foreground hover:text-foreground"
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                )}
+                                <span>{item.description}</span>
+                              </div>
                             </td>
                             <td className="px-4 py-2 text-sm text-muted-foreground">
                               {item.timeHours && item.timeRate ? (
@@ -298,13 +353,34 @@ export default function ProjectDetailPage() {
                     {est.lineItems.map((item) => {
                       const isParent = !item.parentId;
                       const isChild = !!item.parentId;
+                      const isExpanded = expandedParents.has(item.id);
+
+                      // Hide child items if their parent is collapsed
+                      if (isChild && !expandedParents.has(item.parentId || "")) {
+                        return null;
+                      }
+
                       return (
                         <div
                           key={item.id}
                           className={`border-b p-4 last:border-b-0 ${isParent ? "bg-muted/30" : ""} ${isChild ? "pl-8" : ""}`}
                         >
                           <div className={`mb-2 text-base ${isParent ? "font-semibold" : "font-medium"}`}>
-                            {item.description}
+                            <div className="flex items-center gap-2">
+                              {isParent && (
+                                <button
+                                  onClick={() => toggleParent(item.id)}
+                                  className="text-muted-foreground hover:text-foreground"
+                                >
+                                  {isExpanded ? (
+                                    <ChevronDown className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4" />
+                                  )}
+                                </button>
+                              )}
+                              <span>{item.description}</span>
+                            </div>
                           </div>
                           <div className="grid grid-cols-2 gap-y-1.5 text-sm">
                             {item.timeHours && item.timeRate && (
