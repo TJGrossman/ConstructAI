@@ -94,7 +94,7 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("chat");
-  const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
+  const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set()); // Tracks parent descriptions, not IDs
   const [swipeState, setSwipeState] = useState<{
     itemId: string | null;
     startX: number;
@@ -115,36 +115,36 @@ export default function ProjectDetailPage() {
         const data = await res.json();
         setProject(data);
 
-        // Try to restore expanded state from localStorage
+        // Try to restore expanded state from localStorage (using descriptions as stable keys)
         const savedExpandedState = localStorage.getItem(`expandedParents_${projectId}`);
 
         if (savedExpandedState) {
-          // Restore from localStorage
+          // Restore from localStorage (descriptions of expanded parents)
           setExpandedParents(new Set(JSON.parse(savedExpandedState)));
         } else {
           // Default: expand parent items on desktop only (collapsed on mobile)
           const isMobile = window.innerWidth < 1024; // lg breakpoint
-          const parentIds = new Set<string>();
+          const parentDescriptions = new Set<string>();
 
           if (!isMobile) {
             data.estimates?.forEach((est: Estimate) => {
               est.lineItems?.forEach((item: LineItem) => {
-                if (!item.parentId) parentIds.add(item.id);
+                if (!item.parentId) parentDescriptions.add(item.description);
               });
             });
             data.changeOrders?.forEach((co: ChangeOrder) => {
               co.lineItems?.forEach((item: LineItem) => {
-                if (!item.parentId) parentIds.add(item.id);
+                if (!item.parentId) parentDescriptions.add(item.description);
               });
             });
             data.invoices?.forEach((inv: Invoice) => {
               inv.lineItems?.forEach((item: LineItem) => {
-                if (!item.parentId) parentIds.add(item.id);
+                if (!item.parentId) parentDescriptions.add(item.description);
               });
             });
           }
 
-          setExpandedParents(parentIds);
+          setExpandedParents(parentDescriptions);
         }
 
         // Restore scroll position
@@ -164,15 +164,15 @@ export default function ProjectDetailPage() {
     fetchProject();
   }, [fetchProject]);
 
-  const toggleParent = (parentId: string) => {
+  const toggleParent = (parentDescription: string) => {
     setExpandedParents((prev) => {
       const next = new Set(prev);
-      if (next.has(parentId)) {
-        next.delete(parentId);
+      if (next.has(parentDescription)) {
+        next.delete(parentDescription);
       } else {
-        next.add(parentId);
+        next.add(parentDescription);
       }
-      // Save to localStorage
+      // Save to localStorage (using descriptions as stable keys)
       localStorage.setItem(`expandedParents_${projectId}`, JSON.stringify(Array.from(next)));
       return next;
     });
@@ -430,11 +430,14 @@ export default function ProjectDetailPage() {
                       {est.lineItems.map((item) => {
                         const isParent = !item.parentId;
                         const isChild = !!item.parentId;
-                        const isExpanded = expandedParents.has(item.id);
+                        const isExpanded = expandedParents.has(item.description);
 
                         // Hide child items if their parent is collapsed
-                        if (isChild && !expandedParents.has(item.parentId || "")) {
-                          return null;
+                        if (isChild) {
+                          const parent = est.lineItems.find((i) => i.id === item.parentId);
+                          if (parent && !expandedParents.has(parent.description)) {
+                            return null;
+                          }
                         }
 
                         return (
@@ -446,7 +449,7 @@ export default function ProjectDetailPage() {
                               <div className="flex items-center gap-2">
                                 {isParent && (
                                   <button
-                                    onClick={() => toggleParent(item.id)}
+                                    onClick={() => toggleParent(item.description)}
                                     className="text-muted-foreground hover:text-foreground"
                                   >
                                     {isExpanded ? (
@@ -492,11 +495,14 @@ export default function ProjectDetailPage() {
                     {est.lineItems.map((item) => {
                       const isParent = !item.parentId;
                       const isChild = !!item.parentId;
-                      const isExpanded = expandedParents.has(item.id);
+                      const isExpanded = expandedParents.has(item.description);
 
                       // Hide child items if their parent is collapsed
-                      if (isChild && !expandedParents.has(item.parentId || "")) {
-                        return null;
+                      if (isChild) {
+                        const parent = est.lineItems.find((i) => i.id === item.parentId);
+                        if (parent && !expandedParents.has(parent.description)) {
+                          return null;
+                        }
                       }
 
                       // Calculate swipe offset
@@ -541,7 +547,7 @@ export default function ProjectDetailPage() {
                             <div className="flex items-center gap-2">
                               {isParent && (
                                 <button
-                                  onClick={() => toggleParent(item.id)}
+                                  onClick={() => toggleParent(item.description)}
                                   className="text-muted-foreground hover:text-foreground"
                                 >
                                   {isExpanded ? (
