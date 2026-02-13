@@ -55,6 +55,7 @@ export function ReconciliationView({ projectId }: ReconciliationViewProps) {
 
   useEffect(() => {
     fetchReconciliation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   const fetchReconciliation = async () => {
@@ -67,7 +68,7 @@ export function ReconciliationView({ projectId }: ReconciliationViewProps) {
         // Default: expand parents on desktop, collapsed on mobile
         const isMobile = window.innerWidth < 1024;
         if (!isMobile && reconData.lineItems) {
-          const parentIds = new Set(
+          const parentIds = new Set<string>(
             reconData.lineItems.map((item: ReconciliationLineItem) => item.id)
           );
           setExpandedParents(parentIds);
