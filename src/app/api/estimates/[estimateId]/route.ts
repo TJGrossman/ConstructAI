@@ -147,3 +147,31 @@ export async function PATCH(
 
   return NextResponse.json(updated);
 }
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: { estimateId: string } }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userId = (session.user as { id: string }).id;
+
+  // Verify estimate ownership
+  const estimate = await prisma.estimate.findFirst({
+    where: { id: params.estimateId, project: { userId } },
+  });
+
+  if (!estimate) {
+    return NextResponse.json({ error: "Estimate not found" }, { status: 404 });
+  }
+
+  // Delete the estimate (cascade will delete line items)
+  await prisma.estimate.delete({
+    where: { id: params.estimateId },
+  });
+
+  return NextResponse.json({ success: true });
+}

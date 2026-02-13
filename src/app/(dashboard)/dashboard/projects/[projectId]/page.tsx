@@ -315,11 +315,37 @@ export default function ProjectDetailPage() {
     setEditedLineItems((prev) => prev.filter((item) => item.id !== itemId));
   };
 
+  const deleteEstimate = async (estimateId: string) => {
+    if (!confirm("Are you sure you want to delete this estimate? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      await fetch(`/api/estimates/${estimateId}`, {
+        method: "DELETE",
+      });
+      fetchProject();
+    } catch (error) {
+      console.error("Failed to delete estimate:", error);
+      alert("Failed to delete estimate. Please try again.");
+    }
+  };
+
   const saveEstimate = async (estimateId: string) => {
     setIsSaving(true);
     try {
+      // Sort items: parents first, then their children in order
+      const sortedItems: LineItem[] = [];
+      const parentItems = editedLineItems.filter(item => !item.parentId);
+
+      parentItems.forEach(parent => {
+        sortedItems.push(parent);
+        const children = editedLineItems.filter(item => item.parentId === parent.id);
+        sortedItems.push(...children);
+      });
+
       // Calculate totals for each item
-      const itemsWithTotals = editedLineItems.map((item) => {
+      const itemsWithTotals = sortedItems.map((item) => {
         const timeCost = item.timeHours && item.timeRate
           ? Number(item.timeHours) * Number(item.timeRate)
           : 0;
@@ -501,6 +527,14 @@ export default function ProjectDetailPage() {
                           >
                             <Pencil className="h-3 w-3" />
                             <span className="hidden sm:inline">Edit</span>
+                          </button>
+                          <button
+                            onClick={() => deleteEstimate(est.id)}
+                            className="flex items-center gap-1 rounded border border-red-600 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                            title="Delete estimate"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            <span className="hidden sm:inline">Delete</span>
                           </button>
                           {est.status === "draft" && (
                             <button
