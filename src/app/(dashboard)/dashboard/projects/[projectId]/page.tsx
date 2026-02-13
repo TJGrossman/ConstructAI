@@ -794,7 +794,7 @@ export default function ProjectDetailPage() {
                                     />
                                   </div>
                                 ) : (
-                                  <div className="text-right">{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</div>
+                                  <div className="text-right">{item.timeHours} hrs @ {formatCurrency(item.timeRate || 0)}/hr</div>
                                 )}
                               </>
                             )}
@@ -811,7 +811,7 @@ export default function ProjectDetailPage() {
                                     step="0.01"
                                   />
                                 ) : (
-                                  <div className="text-right">{formatCurrency(item.materialsCost)}</div>
+                                  <div className="text-right">{formatCurrency(item.materialsCost || 0)}</div>
                                 )}
                               </>
                             )}
