@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
     // Children will use currentParentId until we hit another parent
     const parentId: string | null = item.isParent ? null : currentParentId;
 
-    const created = await prisma.estimateLineItem.create({
+    const created: { id: string } = await prisma.estimateLineItem.create({
       data: {
         estimateId: estimate.id,
         catalogItemId: item.catalogItemId || null,
