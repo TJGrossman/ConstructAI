@@ -244,7 +244,7 @@ export function ReconciliationView({ projectId }: ReconciliationViewProps) {
                     </td>
                   </tr>
                   {hasChildren && isExpanded && item.children!.map((child) => (
-                    <tr key={child.id} className="border-b">
+                    <tr key={child.id} className="border-b bg-background">
                       <td className="px-4 py-2 pl-12">{child.description}</td>
                       <td className="px-4 py-2 text-muted-foreground">{formatCurrency(child.estimatedCost)}</td>
                       <td className="px-4 py-2">
@@ -347,7 +347,7 @@ export function ReconciliationView({ projectId }: ReconciliationViewProps) {
                   )}
                 </div>
                 {hasChildren && isExpanded && item.children!.map((child) => (
-                  <div key={child.id} className="border-t p-4 pl-8">
+                  <div key={child.id} className="border-t bg-background p-4 pl-8">
                     <div className="mb-2 font-medium">{child.description}</div>
                     <div className="grid grid-cols-2 gap-y-1.5 text-sm">
                       <div className="text-muted-foreground">Estimated:</div>
