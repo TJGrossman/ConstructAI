@@ -75,6 +75,45 @@ export async function POST(req: NextRequest) {
       continue; // Skip if estimate line item not found
     }
 
+    // If estimate item has a parent, ensure parent exists in invoice
+    let invoiceParentId: string | null = null;
+    if (estimateLineItem.parentId) {
+      // Check if parent invoice line item already exists
+      const existingParent = invoice.lineItems.find(
+        (item) => item.estimateLineItemId === estimateLineItem.parentId
+      );
+
+      if (existingParent) {
+        invoiceParentId = existingParent.id;
+      } else {
+        // Create parent invoice line item (grouping header with $0 cost)
+        const estimateParent = await prisma.estimateLineItem.findUnique({
+          where: { id: estimateLineItem.parentId },
+        });
+
+        if (estimateParent) {
+          const createdParent = await prisma.invoiceLineItem.create({
+            data: {
+              invoiceId: invoice.id,
+              estimateLineItemId: estimateParent.id,
+              description: estimateParent.description,
+              category: estimateParent.category,
+              parentId: null, // Parents are top-level
+              timeHours: null,
+              timeRate: null,
+              timeCost: null,
+              materialsCost: null,
+              total: 0, // Parent total will be calculated from children
+              notes: null,
+              sortOrder: invoice.lineItems.length,
+            },
+          });
+          invoiceParentId = createdParent.id;
+          console.log('[Work Entry] Created parent invoice line item:', createdParent);
+        }
+      }
+    }
+
     // Check if this line item already has an invoice entry
     const existingInvoiceItem = invoice.lineItems.find(
       (item) => item.estimateLineItemId === entry.estimateLineItemId
@@ -94,14 +133,14 @@ export async function POST(req: NextRequest) {
         },
       });
     } else {
-      // Create new invoice line item (flat structure - no hierarchy for work entries)
+      // Create new invoice line item (preserving hierarchy from estimate)
       await prisma.invoiceLineItem.create({
         data: {
           invoiceId: invoice.id,
           estimateLineItemId: entry.estimateLineItemId,
           description: entry.description || estimateLineItem.description,
           category: estimateLineItem.category,
-          parentId: null, // Work entries are flat items, not hierarchical
+          parentId: invoiceParentId, // Link to parent if it exists
           timeHours: entry.actualTimeHours ? Number(entry.actualTimeHours) : null,
           timeRate: entry.actualTimeRate ? Number(entry.actualTimeRate) : null,
           timeCost: entry.actualTimeCost ? Number(entry.actualTimeCost) : null,
