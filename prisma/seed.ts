@@ -80,14 +80,14 @@ async function main() {
       total: 13844.6,
       lineItems: {
         create: [
-          { description: "Demo existing kitchen", category: "demolition", quantity: 16, unit: "hour", unitPrice: 75, total: 1200, sortOrder: 0 },
-          { description: "Shaker cabinets - supply & install", category: "cabinets", quantity: 20, unit: "linear_ft", unitPrice: 150, total: 3000, sortOrder: 1 },
-          { description: "Granite countertops", category: "countertops", quantity: 45, unit: "sqft", unitPrice: 85, total: 3825, sortOrder: 2 },
-          { description: "Subway tile backsplash", category: "tile", quantity: 30, unit: "sqft", unitPrice: 20, total: 600, sortOrder: 3 },
-          { description: "Recessed lighting (6 units)", category: "electrical", quantity: 6, unit: "each", unitPrice: 185, total: 1110, sortOrder: 4 },
-          { description: "Plumbing - sink & faucet install", category: "plumbing", quantity: 2, unit: "each", unitPrice: 250, total: 500, sortOrder: 5 },
-          { description: "Wall painting", category: "painting", quantity: 350, unit: "sqft", unitPrice: 4.5, total: 1575, sortOrder: 6 },
-          { description: "General cleanup & haul-away", category: "general_labor", quantity: 14, unit: "hour", unitPrice: 65, total: 910, sortOrder: 7 },
+          { description: "Demo existing kitchen", category: "demolition", timeHours: 16, timeRate: 75, timeCost: 1200, materialsCost: null, total: 1200, sortOrder: 0 },
+          { description: "Shaker cabinets - supply & install", category: "cabinets", timeHours: 8, timeRate: 75, timeCost: 600, materialsCost: 2400, total: 3000, sortOrder: 1 },
+          { description: "Granite countertops", category: "countertops", timeHours: 6, timeRate: 75, timeCost: 450, materialsCost: 3375, total: 3825, sortOrder: 2 },
+          { description: "Subway tile backsplash", category: "tile", timeHours: 4, timeRate: 75, timeCost: 300, materialsCost: 300, total: 600, sortOrder: 3 },
+          { description: "Recessed lighting (6 units)", category: "electrical", timeHours: 5, timeRate: 90, timeCost: 450, materialsCost: 660, total: 1110, sortOrder: 4 },
+          { description: "Plumbing - sink & faucet install", category: "plumbing", timeHours: 3, timeRate: 90, timeCost: 270, materialsCost: 230, total: 500, sortOrder: 5 },
+          { description: "Wall painting", category: "painting", timeHours: 12, timeRate: 65, timeCost: 780, materialsCost: 795, total: 1575, sortOrder: 6 },
+          { description: "General cleanup & haul-away", category: "general_labor", timeHours: 14, timeRate: 65, timeCost: 910, materialsCost: null, total: 910, sortOrder: 7 },
         ],
       },
     },
@@ -105,8 +105,8 @@ async function main() {
       costImpact: 450,
       lineItems: {
         create: [
-          { action: "remove", description: "Granite countertops", quantity: 45, unit: "sqft", unitPrice: 85, total: -3825 },
-          { action: "add", description: "Quartz countertops", quantity: 45, unit: "sqft", unitPrice: 95, total: 4275 },
+          { action: "remove", description: "Granite countertops", category: "countertops", timeHours: 6, timeRate: 75, timeCost: 450, materialsCost: 3375, total: -3825 },
+          { action: "add", description: "Quartz countertops", category: "countertops", timeHours: 6, timeRate: 75, timeCost: 450, materialsCost: 3825, total: 4275 },
         ],
       },
     },
@@ -125,8 +125,8 @@ async function main() {
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       lineItems: {
         create: [
-          { description: "Demo existing kitchen - complete", quantity: 16, unit: "hour", unitPrice: 75, total: 1200, sortOrder: 0 },
-          { description: "Shaker cabinets - supply & install", quantity: 20, unit: "linear_ft", unitPrice: 150, total: 3000, sortOrder: 1 },
+          { description: "Demo existing kitchen - complete", category: "demolition", timeHours: 16, timeRate: 75, timeCost: 1200, materialsCost: null, total: 1200, sortOrder: 0 },
+          { description: "Shaker cabinets - supply & install", category: "cabinets", timeHours: 8, timeRate: 75, timeCost: 600, materialsCost: 2400, total: 3000, sortOrder: 1 },
         ],
       },
     },
