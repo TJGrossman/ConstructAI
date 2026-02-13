@@ -215,9 +215,8 @@ export default async function CustomerPortalPage({
                   <thead>
                     <tr className="border-b bg-gray-50 text-left">
                       <th className="px-6 py-2 font-medium">Description</th>
-                      <th className="px-4 py-2 text-right font-medium">Qty</th>
-                      <th className="px-4 py-2 font-medium">Unit</th>
-                      <th className="px-4 py-2 text-right font-medium">Rate</th>
+                      <th className="px-4 py-2 font-medium">Time</th>
+                      <th className="px-4 py-2 font-medium">Materials</th>
                       <th className="px-4 py-2 text-right font-medium">Amount</th>
                     </tr>
                   </thead>
@@ -225,16 +224,27 @@ export default async function CustomerPortalPage({
                     {inv.lineItems.map((item) => (
                       <tr key={item.id} className="border-b">
                         <td className="px-6 py-2">{item.description}</td>
-                        <td className="px-4 py-2 text-right">{String(item.quantity)}</td>
-                        <td className="px-4 py-2 text-gray-500">{item.unit}</td>
-                        <td className="px-4 py-2 text-right">{formatCurrency(String(item.unitPrice))}</td>
+                        <td className="px-4 py-2 text-sm text-gray-600">
+                          {item.timeHours && item.timeRate ? (
+                            <span>{String(item.timeHours)} hrs @ {formatCurrency(String(item.timeRate))}/hr</span>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 text-sm text-gray-600">
+                          {item.materialsCost ? (
+                            formatCurrency(String(item.materialsCost))
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
                         <td className="px-4 py-2 text-right font-medium">{formatCurrency(String(item.total))}</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
                     <tr className="text-base font-semibold">
-                      <td colSpan={4} className="px-6 py-3 text-right">Total</td>
+                      <td colSpan={3} className="px-6 py-3 text-right">Total</td>
                       <td className="px-4 py-3 text-right">{formatCurrency(String(inv.total))}</td>
                     </tr>
                   </tfoot>
