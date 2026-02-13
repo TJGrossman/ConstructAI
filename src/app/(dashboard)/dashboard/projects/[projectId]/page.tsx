@@ -94,7 +94,7 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("chat");
-  const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set()); // Tracks parent descriptions, not IDs
+  const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
   const [swipeState, setSwipeState] = useState<{
     itemId: string | null;
     startX: number;
@@ -115,36 +115,36 @@ export default function ProjectDetailPage() {
         const data = await res.json();
         setProject(data);
 
-        // Try to restore expanded state from localStorage (using descriptions as stable keys)
+        // Try to restore expanded state from localStorage
         const savedExpandedState = localStorage.getItem(`expandedParents_${projectId}`);
 
         if (savedExpandedState) {
-          // Restore from localStorage (descriptions of expanded parents)
+          // Restore from localStorage
           setExpandedParents(new Set(JSON.parse(savedExpandedState)));
         } else {
           // Default: expand parent items on desktop only (collapsed on mobile)
           const isMobile = window.innerWidth < 1024; // lg breakpoint
-          const parentDescriptions = new Set<string>();
+          const parentIds = new Set<string>();
 
           if (!isMobile) {
             data.estimates?.forEach((est: Estimate) => {
               est.lineItems?.forEach((item: LineItem) => {
-                if (!item.parentId) parentDescriptions.add(item.description);
+                if (!item.parentId) parentIds.add(item.id);
               });
             });
             data.changeOrders?.forEach((co: ChangeOrder) => {
               co.lineItems?.forEach((item: LineItem) => {
-                if (!item.parentId) parentDescriptions.add(item.description);
+                if (!item.parentId) parentIds.add(item.id);
               });
             });
             data.invoices?.forEach((inv: Invoice) => {
               inv.lineItems?.forEach((item: LineItem) => {
-                if (!item.parentId) parentDescriptions.add(item.description);
+                if (!item.parentId) parentIds.add(item.id);
               });
             });
           }
 
-          setExpandedParents(parentDescriptions);
+          setExpandedParents(parentIds);
         }
 
         // Restore scroll position
@@ -164,15 +164,15 @@ export default function ProjectDetailPage() {
     fetchProject();
   }, [fetchProject]);
 
-  const toggleParent = (parentDescription: string) => {
+  const toggleParent = (parentId: string) => {
     setExpandedParents((prev) => {
       const next = new Set(prev);
-      if (next.has(parentDescription)) {
-        next.delete(parentDescription);
+      if (next.has(parentId)) {
+        next.delete(parentId);
       } else {
-        next.add(parentDescription);
+        next.add(parentId);
       }
-      // Save to localStorage (using descriptions as stable keys)
+      // Save to localStorage
       localStorage.setItem(`expandedParents_${projectId}`, JSON.stringify(Array.from(next)));
       return next;
     });
@@ -212,7 +212,7 @@ export default function ProjectDetailPage() {
     }));
   };
 
-  const handleTouchEnd = async (estimateId: string, itemId: string, estimate: Estimate) => {
+  const handleTouchEnd = async (estimateId: string, itemId: string) => {
     if (!swipeState.isDragging) return;
 
     const swipeDistance = swipeState.startX - swipeState.currentX;
@@ -230,38 +230,16 @@ export default function ProjectDetailPage() {
         isDragging: false,
       });
 
-      // Save scroll position and expanded state to localStorage
+      // Save scroll position to localStorage
       localStorage.setItem(`scrollPos_${projectId}`, window.scrollY.toString());
-      localStorage.setItem(`expandedParents_${projectId}`, JSON.stringify(Array.from(expandedParents)));
 
-      // Start API call immediately (animation happens in parallel)
-      // await new Promise(resolve => setTimeout(resolve, 300));
-
-      // Optimistically remove from UI
-      const updatedLineItems = estimate.lineItems.filter((item) => item.id !== itemId);
-
-      // Call API to update estimate
+      // Call API to delete the specific line item
       try {
-        await fetch(`/api/estimates/${estimateId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            lineItems: updatedLineItems.map((item) => ({
-              description: item.description,
-              catalogItemId: item.category || undefined,
-              category: item.category || undefined,
-              isParent: !item.parentId,
-              parentId: item.parentId || undefined,
-              timeHours: item.timeHours ? Number(item.timeHours) : null,
-              timeRate: item.timeRate ? Number(item.timeRate) : null,
-              timeCost: item.timeCost ? Number(item.timeCost) : null,
-              materialsCost: item.materialsCost ? Number(item.materialsCost) : null,
-              total: Number(item.total),
-            })),
-          }),
+        await fetch(`/api/estimates/${estimateId}/line-items/${itemId}`, {
+          method: "DELETE",
         });
 
-        // Refresh project data (will restore state from localStorage)
+        // Refresh project data (expanded state will be preserved automatically since IDs don't change)
         fetchProject();
       } catch (error) {
         console.error("Failed to delete item:", error);
@@ -430,14 +408,11 @@ export default function ProjectDetailPage() {
                       {est.lineItems.map((item) => {
                         const isParent = !item.parentId;
                         const isChild = !!item.parentId;
-                        const isExpanded = expandedParents.has(item.description);
+                        const isExpanded = expandedParents.has(item.id);
 
                         // Hide child items if their parent is collapsed
-                        if (isChild) {
-                          const parent = est.lineItems.find((i) => i.id === item.parentId);
-                          if (parent && !expandedParents.has(parent.description)) {
-                            return null;
-                          }
+                        if (isChild && !expandedParents.has(item.parentId || "")) {
+                          return null;
                         }
 
                         return (
@@ -449,7 +424,7 @@ export default function ProjectDetailPage() {
                               <div className="flex items-center gap-2">
                                 {isParent && (
                                   <button
-                                    onClick={() => toggleParent(item.description)}
+                                    onClick={() => toggleParent(item.id)}
                                     className="text-muted-foreground hover:text-foreground"
                                   >
                                     {isExpanded ? (
@@ -495,14 +470,11 @@ export default function ProjectDetailPage() {
                     {est.lineItems.map((item) => {
                       const isParent = !item.parentId;
                       const isChild = !!item.parentId;
-                      const isExpanded = expandedParents.has(item.description);
+                      const isExpanded = expandedParents.has(item.id);
 
                       // Hide child items if their parent is collapsed
-                      if (isChild) {
-                        const parent = est.lineItems.find((i) => i.id === item.parentId);
-                        if (parent && !expandedParents.has(parent.description)) {
-                          return null;
-                        }
+                      if (isChild && !expandedParents.has(item.parentId || "")) {
+                        return null;
                       }
 
                       // Calculate swipe offset
@@ -541,13 +513,13 @@ export default function ProjectDetailPage() {
                             }}
                             onTouchStart={isChild ? (e) => handleTouchStart(e, item.id) : undefined}
                             onTouchMove={isChild ? handleTouchMove : undefined}
-                            onTouchEnd={isChild ? () => handleTouchEnd(est.id, item.id, est) : undefined}
+                            onTouchEnd={isChild ? () => handleTouchEnd(est.id, item.id) : undefined}
                           >
                           <div className={`mb-2 text-base ${isParent ? "font-semibold" : "font-medium"}`}>
                             <div className="flex items-center gap-2">
                               {isParent && (
                                 <button
-                                  onClick={() => toggleParent(item.description)}
+                                  onClick={() => toggleParent(item.id)}
                                   className="text-muted-foreground hover:text-foreground"
                                 >
                                   {isExpanded ? (
