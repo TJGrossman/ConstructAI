@@ -25,7 +25,8 @@
       "Bash(cd /Users/theodoregrossman/Desktop/Claude\\\\ Code\\\\ Projects/ConstructAI && npx prisma format:*)",
       "Bash(lsof -ti:3000)",
       "Bash(cd /Users/theodoregrossman/Desktop/Claude\\\\ Code\\\\ Projects/ConstructAI && npx prisma db pull:*)",
-      "Bash(git checkout prisma/schema.prisma)"
+      "Bash(git checkout prisma/schema.prisma)",
+      "Bash(grep:*)"
     ]
   }
 }
