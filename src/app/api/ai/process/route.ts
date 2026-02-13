@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = (session.user as { id: string }).id;
-  const { projectId, message, conversationId, pendingDraft } = await req.json();
+  const { projectId, message, conversationId } = await req.json();
 
   if (!projectId || !message) {
     return NextResponse.json(
@@ -59,15 +59,6 @@ export async function POST(req: NextRequest) {
     .map((inv) => `Invoice #${inv.number} (${inv.status}): $${inv.total}`)
     .join("\n");
 
-  // Add pending draft to context if it exists
-  const pendingDraftContext = pendingDraft
-    ? `\n\nPending Draft (not yet approved):
-Type: ${pendingDraft.type}
-Title: ${pendingDraft.title || "Untitled"}
-Line Items: ${JSON.stringify(pendingDraft.lineItems, null, 2)}
-Notes: ${pendingDraft.notes || "None"}`
-    : "";
-
   const projectContext = `Project: ${project.name}
 Customer: ${project.customer.name}
 Address: ${project.address || "N/A"}
@@ -81,7 +72,7 @@ Change Orders:
 ${changeOrdersSummary || "None"}
 
 Invoices:
-${invoicesSummary || "None"}${pendingDraftContext}`;
+${invoicesSummary || "None"}`;
 
   // Get or create conversation
   let conversation;

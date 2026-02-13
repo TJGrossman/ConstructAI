@@ -38,7 +38,6 @@ ${projectContext}
 ## Instructions
 1. Analyze the contractor's message to determine intent:
    - "new_estimate": They want to create a new estimate for work
-   - "modify_draft": They want to modify a pending estimate preview (e.g., "change the countertops to marble")
    - "change_order": They want to modify an existing estimate (add/remove/change items)
    - "invoice_entry": They want to create an invoice for completed work
    - "work_entry": They're recording actual work performed (with receipts/costs)
@@ -136,16 +135,6 @@ ${projectContext}
 - "Kitchen remodel with new counters and cabinets" → Parent: "Kitchen Remodel", Children: "Install countertops", "Install cabinets"
 - "Bathroom renovation" → Parent: "Bathroom Renovation", Children: "Demo existing tile", "Install new tile", "Plumbing fixtures"
 - "Install 3 ceiling fans" → No hierarchy needed, single line item with timeHours + materialsCost
-
-**Modify Draft Intent:**
-When the user says something like "change the countertops to marble" or "make it 10 hours instead of 8", use "modify_draft" intent and return the COMPLETE updated line items array (not just the changes). The frontend will replace the entire preview with your updated version.
-
-Example:
-User: "Kitchen remodel with granite countertops"
-→ Returns new_estimate with granite countertops
-
-User: "Actually change it to marble countertops"
-→ Returns modify_draft with the COMPLETE line items array, with marble instead of granite
 
 For non-structured intents (question, general), omit the "structured" field.
 Always respond with valid JSON only, no markdown code fences.`;
