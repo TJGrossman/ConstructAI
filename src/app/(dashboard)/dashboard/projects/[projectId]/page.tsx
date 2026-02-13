@@ -256,26 +256,35 @@ export default function ProjectDetailPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {est.lineItems.map((item) => (
-                        <tr key={item.id} className="border-b">
-                          <td className="px-4 py-2">{item.description}</td>
-                          <td className="px-4 py-2 text-sm text-muted-foreground">
-                            {item.timeHours && item.timeRate ? (
-                              <span>{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</span>
-                            ) : (
-                              <span className="text-muted-foreground/50">—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-2 text-sm text-muted-foreground">
-                            {item.materialsCost ? (
-                              formatCurrency(item.materialsCost)
-                            ) : (
-                              <span className="text-muted-foreground/50">—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-2 text-right font-medium">{formatCurrency(item.total)}</td>
-                        </tr>
-                      ))}
+                      {est.lineItems.map((item) => {
+                        const isParent = !item.parentId;
+                        const isChild = !!item.parentId;
+                        return (
+                          <tr
+                            key={item.id}
+                            className={`border-b ${isParent ? "bg-muted/30 font-semibold" : ""}`}
+                          >
+                            <td className={`px-4 py-2 ${isChild ? "pl-8" : ""}`}>
+                              {item.description}
+                            </td>
+                            <td className="px-4 py-2 text-sm text-muted-foreground">
+                              {item.timeHours && item.timeRate ? (
+                                <span>{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</span>
+                              ) : (
+                                <span className="text-muted-foreground/50">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2 text-sm text-muted-foreground">
+                              {item.materialsCost ? (
+                                formatCurrency(item.materialsCost)
+                              ) : (
+                                <span className="text-muted-foreground/50">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2 text-right font-medium">{formatCurrency(item.total)}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                     <tfoot>
                       <tr className="font-medium">
@@ -286,27 +295,36 @@ export default function ProjectDetailPage() {
                   </table>
                   {/* Mobile card view */}
                   <div className="lg:hidden">
-                    {est.lineItems.map((item) => (
-                      <div key={item.id} className="border-b p-4 last:border-b-0">
-                        <div className="mb-2 font-medium text-base">{item.description}</div>
-                        <div className="grid grid-cols-2 gap-y-1.5 text-sm">
-                          {item.timeHours && item.timeRate && (
-                            <>
-                              <div className="text-muted-foreground">Time:</div>
-                              <div className="text-right">{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</div>
-                            </>
-                          )}
-                          {item.materialsCost && (
-                            <>
-                              <div className="text-muted-foreground">Materials:</div>
-                              <div className="text-right">{formatCurrency(item.materialsCost)}</div>
-                            </>
-                          )}
-                          <div className="text-muted-foreground">Total:</div>
-                          <div className="text-right font-semibold">{formatCurrency(item.total)}</div>
+                    {est.lineItems.map((item) => {
+                      const isParent = !item.parentId;
+                      const isChild = !!item.parentId;
+                      return (
+                        <div
+                          key={item.id}
+                          className={`border-b p-4 last:border-b-0 ${isParent ? "bg-muted/30" : ""} ${isChild ? "pl-8" : ""}`}
+                        >
+                          <div className={`mb-2 text-base ${isParent ? "font-semibold" : "font-medium"}`}>
+                            {item.description}
+                          </div>
+                          <div className="grid grid-cols-2 gap-y-1.5 text-sm">
+                            {item.timeHours && item.timeRate && (
+                              <>
+                                <div className="text-muted-foreground">Time:</div>
+                                <div className="text-right">{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</div>
+                              </>
+                            )}
+                            {item.materialsCost && (
+                              <>
+                                <div className="text-muted-foreground">Materials:</div>
+                                <div className="text-right">{formatCurrency(item.materialsCost)}</div>
+                              </>
+                            )}
+                            <div className="text-muted-foreground">Total:</div>
+                            <div className="text-right font-semibold">{formatCurrency(item.total)}</div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                     <div className="border-t bg-muted/30 p-4">
                       <div className="flex justify-between font-semibold text-base">
                         <span>Total</span>
@@ -358,11 +376,68 @@ export default function ProjectDetailPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {co.lineItems.map((item) => (
-                        <tr key={item.id} className="border-b">
-                          <td className="px-4 py-2">
+                      {co.lineItems.map((item) => {
+                        const isParent = !item.parentId;
+                        const isChild = !!item.parentId;
+                        return (
+                          <tr
+                            key={item.id}
+                            className={`border-b ${isParent ? "bg-muted/30 font-semibold" : ""}`}
+                          >
+                            <td className="px-4 py-2">
+                              <span
+                                className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                                  item.action === "add"
+                                    ? "bg-green-100 text-green-700"
+                                    : item.action === "remove"
+                                      ? "bg-red-100 text-red-700"
+                                      : "bg-yellow-100 text-yellow-700"
+                                }`}
+                              >
+                                {item.action}
+                              </span>
+                            </td>
+                            <td className={`px-4 py-2 ${isChild ? "pl-8" : ""}`}>
+                              {item.description}
+                              {item.originalDesc && (
+                                <span className="ml-2 text-xs text-muted-foreground line-through">
+                                  {item.originalDesc}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2 text-sm text-muted-foreground">
+                              {item.timeHours && item.timeRate ? (
+                                <span>{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</span>
+                              ) : (
+                                <span className="text-muted-foreground/50">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2 text-sm text-muted-foreground">
+                              {item.materialsCost ? (
+                                formatCurrency(item.materialsCost)
+                              ) : (
+                                <span className="text-muted-foreground/50">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2 text-right font-medium">{formatCurrency(item.total)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  {/* Mobile card view */}
+                  <div className="lg:hidden">
+                    {co.lineItems.map((item) => {
+                      const isParent = !item.parentId;
+                      const isChild = !!item.parentId;
+                      return (
+                        <div
+                          key={item.id}
+                          className={`border-b p-4 last:border-b-0 ${isParent ? "bg-muted/30" : ""} ${isChild ? "pl-8" : ""}`}
+                        >
+                          <div className="mb-2 flex items-start gap-2">
                             <span
-                              className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                              className={`rounded px-2 py-1 text-xs font-medium ${
                                 item.action === "add"
                                   ? "bg-green-100 text-green-700"
                                   : item.action === "remove"
@@ -372,77 +447,34 @@ export default function ProjectDetailPage() {
                             >
                               {item.action}
                             </span>
-                          </td>
-                          <td className="px-4 py-2">
+                          </div>
+                          <div className={`mb-2 text-base ${isParent ? "font-semibold" : "font-medium"}`}>
                             {item.description}
                             {item.originalDesc && (
-                              <span className="ml-2 text-xs text-muted-foreground line-through">
+                              <div className="mt-1 text-sm text-muted-foreground line-through">
                                 {item.originalDesc}
-                              </span>
+                              </div>
                             )}
-                          </td>
-                          <td className="px-4 py-2 text-sm text-muted-foreground">
-                            {item.timeHours && item.timeRate ? (
-                              <span>{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</span>
-                            ) : (
-                              <span className="text-muted-foreground/50">—</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-y-1.5 text-sm">
+                            {item.timeHours && item.timeRate && (
+                              <>
+                                <div className="text-muted-foreground">Time:</div>
+                                <div className="text-right">{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</div>
+                              </>
                             )}
-                          </td>
-                          <td className="px-4 py-2 text-sm text-muted-foreground">
-                            {item.materialsCost ? (
-                              formatCurrency(item.materialsCost)
-                            ) : (
-                              <span className="text-muted-foreground/50">—</span>
+                            {item.materialsCost && (
+                              <>
+                                <div className="text-muted-foreground">Materials:</div>
+                                <div className="text-right">{formatCurrency(item.materialsCost)}</div>
+                              </>
                             )}
-                          </td>
-                          <td className="px-4 py-2 text-right font-medium">{formatCurrency(item.total)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {/* Mobile card view */}
-                  <div className="lg:hidden">
-                    {co.lineItems.map((item) => (
-                      <div key={item.id} className="border-b p-4 last:border-b-0">
-                        <div className="mb-2 flex items-start gap-2">
-                          <span
-                            className={`rounded px-2 py-1 text-xs font-medium ${
-                              item.action === "add"
-                                ? "bg-green-100 text-green-700"
-                                : item.action === "remove"
-                                  ? "bg-red-100 text-red-700"
-                                  : "bg-yellow-100 text-yellow-700"
-                            }`}
-                          >
-                            {item.action}
-                          </span>
+                            <div className="text-muted-foreground">Total:</div>
+                            <div className="text-right font-semibold">{formatCurrency(item.total)}</div>
+                          </div>
                         </div>
-                        <div className="mb-2 font-medium text-base">
-                          {item.description}
-                          {item.originalDesc && (
-                            <div className="mt-1 text-sm text-muted-foreground line-through">
-                              {item.originalDesc}
-                            </div>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-2 gap-y-1.5 text-sm">
-                          {item.timeHours && item.timeRate && (
-                            <>
-                              <div className="text-muted-foreground">Time:</div>
-                              <div className="text-right">{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</div>
-                            </>
-                          )}
-                          {item.materialsCost && (
-                            <>
-                              <div className="text-muted-foreground">Materials:</div>
-                              <div className="text-right">{formatCurrency(item.materialsCost)}</div>
-                            </>
-                          )}
-                          <div className="text-muted-foreground">Total:</div>
-                          <div className="text-right font-semibold">{formatCurrency(item.total)}</div>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))
@@ -500,26 +532,35 @@ export default function ProjectDetailPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {inv.lineItems.map((item) => (
-                        <tr key={item.id} className="border-b">
-                          <td className="px-4 py-2">{item.description}</td>
-                          <td className="px-4 py-2 text-sm text-muted-foreground">
-                            {item.timeHours && item.timeRate ? (
-                              <span>{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</span>
-                            ) : (
-                              <span className="text-muted-foreground/50">—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-2 text-sm text-muted-foreground">
-                            {item.materialsCost ? (
-                              formatCurrency(item.materialsCost)
-                            ) : (
-                              <span className="text-muted-foreground/50">—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-2 text-right font-medium">{formatCurrency(item.total)}</td>
-                        </tr>
-                      ))}
+                      {inv.lineItems.map((item) => {
+                        const isParent = !item.parentId;
+                        const isChild = !!item.parentId;
+                        return (
+                          <tr
+                            key={item.id}
+                            className={`border-b ${isParent ? "bg-muted/30 font-semibold" : ""}`}
+                          >
+                            <td className={`px-4 py-2 ${isChild ? "pl-8" : ""}`}>
+                              {item.description}
+                            </td>
+                            <td className="px-4 py-2 text-sm text-muted-foreground">
+                              {item.timeHours && item.timeRate ? (
+                                <span>{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</span>
+                              ) : (
+                                <span className="text-muted-foreground/50">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2 text-sm text-muted-foreground">
+                              {item.materialsCost ? (
+                                formatCurrency(item.materialsCost)
+                              ) : (
+                                <span className="text-muted-foreground/50">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2 text-right font-medium">{formatCurrency(item.total)}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                     <tfoot>
                       <tr className="font-medium">
@@ -530,27 +571,36 @@ export default function ProjectDetailPage() {
                   </table>
                   {/* Mobile card view */}
                   <div className="lg:hidden">
-                    {inv.lineItems.map((item) => (
-                      <div key={item.id} className="border-b p-4 last:border-b-0">
-                        <div className="mb-2 font-medium text-base">{item.description}</div>
-                        <div className="grid grid-cols-2 gap-y-1.5 text-sm">
-                          {item.timeHours && item.timeRate && (
-                            <>
-                              <div className="text-muted-foreground">Time:</div>
-                              <div className="text-right">{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</div>
-                            </>
-                          )}
-                          {item.materialsCost && (
-                            <>
-                              <div className="text-muted-foreground">Materials:</div>
-                              <div className="text-right">{formatCurrency(item.materialsCost)}</div>
-                            </>
-                          )}
-                          <div className="text-muted-foreground">Total:</div>
-                          <div className="text-right font-semibold">{formatCurrency(item.total)}</div>
+                    {inv.lineItems.map((item) => {
+                      const isParent = !item.parentId;
+                      const isChild = !!item.parentId;
+                      return (
+                        <div
+                          key={item.id}
+                          className={`border-b p-4 last:border-b-0 ${isParent ? "bg-muted/30" : ""} ${isChild ? "pl-8" : ""}`}
+                        >
+                          <div className={`mb-2 text-base ${isParent ? "font-semibold" : "font-medium"}`}>
+                            {item.description}
+                          </div>
+                          <div className="grid grid-cols-2 gap-y-1.5 text-sm">
+                            {item.timeHours && item.timeRate && (
+                              <>
+                                <div className="text-muted-foreground">Time:</div>
+                                <div className="text-right">{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</div>
+                              </>
+                            )}
+                            {item.materialsCost && (
+                              <>
+                                <div className="text-muted-foreground">Materials:</div>
+                                <div className="text-right">{formatCurrency(item.materialsCost)}</div>
+                              </>
+                            )}
+                            <div className="text-muted-foreground">Total:</div>
+                            <div className="text-right font-semibold">{formatCurrency(item.total)}</div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                     <div className="border-t bg-muted/30 p-4">
                       <div className="flex justify-between font-semibold text-base">
                         <span>Total</span>
