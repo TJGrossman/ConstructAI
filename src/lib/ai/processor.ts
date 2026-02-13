@@ -54,7 +54,7 @@ export async function processMessage(
   );
 
   const model = gemini.getGenerativeModel({
-    model: "gemini-2.0-flash-exp",
+    model: "gemini-1.5-flash",
     systemInstruction: {
       parts: [{ text: systemPrompt }],
       role: "user",
@@ -87,7 +87,7 @@ export async function generateCatalog(
 ): Promise<CatalogGenerationResult[]> {
   const prompt = buildCatalogGenerationPrompt(description);
 
-  const model = gemini.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+  const model = gemini.getGenerativeModel({ model: "gemini-1.5-flash" });
   const result = await model.generateContent(prompt);
   const text = result.response.text();
 

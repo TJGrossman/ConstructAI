@@ -39,7 +39,7 @@ When returning catalog items, use this JSON format:
 Only include catalogItems when you have complete information to update the catalog.`;
 
     const model = gemini.getGenerativeModel({
-      model: "gemini-2.0-flash-exp",
+      model: "gemini-1.5-flash",
       systemInstruction: {
         parts: [{ text: systemPrompt }],
         role: "user",
