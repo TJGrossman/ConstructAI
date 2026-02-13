@@ -143,7 +143,12 @@ export function CatalogChatPanel({ existingItems, onCatalogUpdate }: CatalogChat
         ) : (
           <div className="space-y-4">
             {messages.map((msg) => (
-              <ChatMessage key={msg.id} message={msg} />
+              <ChatMessage
+                key={msg.id}
+                role={msg.role}
+                content={msg.content}
+                createdAt={msg.createdAt}
+              />
             ))}
             {isLoading && (
               <div className="flex items-center gap-2 text-muted-foreground">
