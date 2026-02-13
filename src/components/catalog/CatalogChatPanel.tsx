@@ -136,7 +136,7 @@ export function CatalogChatPanel({ existingItems, onCatalogUpdate }: CatalogChat
             <div>
               <p className="mb-2 text-lg">Start a conversation</p>
               <p className="text-sm">
-                Tell me about your services, rates, or changes you'd like to make.
+                Tell me about your services, rates, or changes you&apos;d like to make.
               </p>
             </div>
           </div>
