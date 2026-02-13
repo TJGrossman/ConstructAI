@@ -102,23 +102,28 @@ export default function ProjectDetailPage() {
       if (res.ok) {
         const data = await res.json();
         setProject(data);
-        // Expand all parent items by default
+        // Expand parent items by default on desktop only (collapsed on mobile)
+        const isMobile = window.innerWidth < 1024; // lg breakpoint
         const parentIds = new Set<string>();
-        data.estimates?.forEach((est: Estimate) => {
-          est.lineItems?.forEach((item: LineItem) => {
-            if (!item.parentId) parentIds.add(item.id);
+
+        if (!isMobile) {
+          data.estimates?.forEach((est: Estimate) => {
+            est.lineItems?.forEach((item: LineItem) => {
+              if (!item.parentId) parentIds.add(item.id);
+            });
           });
-        });
-        data.changeOrders?.forEach((co: ChangeOrder) => {
-          co.lineItems?.forEach((item: LineItem) => {
-            if (!item.parentId) parentIds.add(item.id);
+          data.changeOrders?.forEach((co: ChangeOrder) => {
+            co.lineItems?.forEach((item: LineItem) => {
+              if (!item.parentId) parentIds.add(item.id);
+            });
           });
-        });
-        data.invoices?.forEach((inv: Invoice) => {
-          inv.lineItems?.forEach((item: LineItem) => {
-            if (!item.parentId) parentIds.add(item.id);
+          data.invoices?.forEach((inv: Invoice) => {
+            inv.lineItems?.forEach((item: LineItem) => {
+              if (!item.parentId) parentIds.add(item.id);
+            });
           });
-        });
+        }
+
         setExpandedParents(parentIds);
       }
     } finally {
@@ -140,6 +145,22 @@ export default function ProjectDetailPage() {
       }
       return next;
     });
+  };
+
+  // Calculate rolled-up total for parent items (sum of children)
+  const getItemTotal = (item: LineItem, allItems: LineItem[]): string => {
+    const isParent = !item.parentId;
+    if (!isParent) {
+      return item.total;
+    }
+
+    // Sum children's totals
+    const children = allItems.filter((i) => i.parentId === item.id);
+    const childrenTotal = children.reduce((sum, child) => {
+      return sum + parseFloat(child.total);
+    }, 0);
+
+    return childrenTotal.toFixed(2);
   };
 
   const updateStatus = async (
@@ -336,7 +357,9 @@ export default function ProjectDetailPage() {
                                 <span className="text-muted-foreground/50">—</span>
                               )}
                             </td>
-                            <td className="px-4 py-2 text-right font-medium">{formatCurrency(item.total)}</td>
+                            <td className="px-4 py-2 text-right font-medium">
+                              {formatCurrency(getItemTotal(item, est.lineItems))}
+                            </td>
                           </tr>
                         );
                       })}
@@ -396,7 +419,9 @@ export default function ProjectDetailPage() {
                               </>
                             )}
                             <div className="text-muted-foreground">Total:</div>
-                            <div className="text-right font-semibold">{formatCurrency(item.total)}</div>
+                            <div className="text-right font-semibold">
+                              {formatCurrency(getItemTotal(item, est.lineItems))}
+                            </div>
                           </div>
                         </div>
                       );
