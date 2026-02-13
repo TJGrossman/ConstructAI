@@ -37,10 +37,16 @@ export function calculateInvoiceTotals(
   lineItems: LineItem[],
   taxRate: number
 ) {
-  // Sum all items except parent headers (which have isParent=true and $0 total)
+  // Determine which items are parent headers (have children)
+  const parentIds = new Set(lineItems.filter(item => item.parentId).map(item => item.parentId));
+
   const subtotal = lineItems.reduce((sum, item) => {
-    // Skip parent items (grouping headers with no cost)
-    if (item.isParent) return sum;
+    // Skip parent headers (items that have children)
+    const isParentHeader = !item.parentId && parentIds.has(item.id);
+    if (isParentHeader) {
+      return sum;
+    }
+    // Count child items and flat items
     return sum + item.total;
   }, 0);
 

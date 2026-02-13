@@ -166,15 +166,18 @@ export async function POST(req: NextRequest) {
     estimateLineItemId: item.estimateLineItemId
   })));
 
-  // Sum only child items (items with parentId) to avoid counting parent headers
-  // Parent headers are created with $0 total, but let's be explicit
+  // Determine which items are parent headers (have children)
+  const parentIds = new Set(allLineItems.filter(item => item.parentId).map(item => item.parentId));
+
+  // Sum only child items and flat items, skip parent headers
   const subtotal = allLineItems.reduce((sum, item) => {
-    // Skip parent items (items without parentId are grouping headers)
-    if (!item.parentId) {
-      console.log(`[Work Entry] Skipping parent item: ${item.description}`);
+    // Skip parent headers (items that have children)
+    const isParentHeader = !item.parentId && parentIds.has(item.id);
+    if (isParentHeader) {
+      console.log(`[Work Entry] Skipping parent header: ${item.description}`);
       return sum;
     }
-    console.log(`[Work Entry] Adding child item total: ${item.total}, running sum: ${sum + Number(item.total)}`);
+    console.log(`[Work Entry] Adding item total: ${item.total}, running sum: ${sum + Number(item.total)}`);
     return sum + Number(item.total);
   }, 0);
 

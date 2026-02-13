@@ -38,18 +38,23 @@ export function validateEstimateLineItems(items: LineItem[]): LineItem[] {
 
 /**
  * Calculates estimate totals from hierarchical line items
- * Sums all leaf items (items without children)
- * Parent headers always have $0 total, so we can safely sum all items
+ * Sums all leaf items (items that are children OR have no children)
+ * Skips parent headers (items with children but no parent)
  */
 export function calculateEstimateTotals(
   lineItems: LineItem[],
   taxRate: number
 ) {
-  // Sum all items - parent headers have $0 total, so no double-counting
-  // This handles both hierarchical (parent/child) and flat structures
+  // Determine which items are parent headers (have children)
+  const parentIds = new Set(lineItems.filter(item => item.parentId).map(item => item.parentId));
+
   const subtotal = lineItems.reduce((sum, item) => {
-    // Skip parent items (they're grouping headers with no cost)
-    if (item.isParent) return sum;
+    // Skip parent headers (items that have children)
+    const isParentHeader = !item.parentId && parentIds.has(item.id);
+    if (isParentHeader) {
+      return sum;
+    }
+    // Count child items and flat items
     return sum + item.total;
   }, 0);
 
