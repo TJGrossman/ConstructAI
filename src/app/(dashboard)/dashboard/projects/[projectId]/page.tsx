@@ -234,8 +234,8 @@ export default function ProjectDetailPage() {
       localStorage.setItem(`scrollPos_${projectId}`, window.scrollY.toString());
       localStorage.setItem(`expandedParents_${projectId}`, JSON.stringify(Array.from(expandedParents)));
 
-      // Wait for animation to complete
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Start API call immediately (animation happens in parallel)
+      // await new Promise(resolve => setTimeout(resolve, 300));
 
       // Optimistically remove from UI
       const updatedLineItems = estimate.lineItems.filter((item) => item.id !== itemId);
