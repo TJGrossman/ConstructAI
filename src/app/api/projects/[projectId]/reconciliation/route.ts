@@ -87,6 +87,12 @@ export async function GET(
     return NextResponse.json({ error: "No approved estimate found" }, { status: 404 });
   }
 
+  console.log('[Reconciliation] Original estimate:', {
+    id: originalEstimate.id,
+    total: originalEstimate.total,
+    lineItemsCount: originalEstimate.lineItems.length
+  });
+
   const lineItemMap = new Map<string, ReconciliationLineItem>();
 
   originalEstimate.lineItems.forEach((item) => {
@@ -182,6 +188,17 @@ export async function GET(
   const remainingBudget = estimatedCost - invoicedTotal;
   const variance = estimatedCost - invoicedTotal;
   const variancePercent = estimatedCost > 0 ? (variance / estimatedCost) * 100 : 0;
+
+  console.log('[Reconciliation] Calculated totals:', {
+    originalEstimateTotal,
+    customerRequestedChanges,
+    unanticipatedChanges,
+    estimatedCost,
+    invoicesCount: project.invoices.length,
+    invoicedTotal,
+    paidTotal,
+    unpaidTotal
+  });
 
   const data: ReconciliationData = {
     projectName: project.name,
