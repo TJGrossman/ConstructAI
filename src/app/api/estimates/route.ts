@@ -61,50 +61,27 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Create parent items first, then children
-  const itemsWithIds = new Map<number, string>();
-  const parentItems = (lineItems as LineItem[]).filter((item) => item.isParent);
-  const childItems = (lineItems as LineItem[]).filter((item) => !item.isParent);
-
-  // Create parent items
-  for (let i = 0; i < parentItems.length; i++) {
-    const item = parentItems[i];
-    const created = await prisma.estimateLineItem.create({
-      data: {
-        estimateId: estimate.id,
-        catalogItemId: item.catalogItemId || null,
-        description: item.description,
-        category: item.category || null,
-        timeHours: item.timeHours ?? null,
-        timeRate: item.timeRate ?? null,
-        timeCost: item.timeCost ?? null,
-        materialsCost: item.materialsCost ?? null,
-        total: item.total,
-        notes: item.notes || null,
-        sortOrder: i,
-      },
-    });
-    itemsWithIds.set(i, created.id);
-  }
-
-  // Create child items (tracking parent indices for hierarchy)
+  // Create line items with hierarchy
+  // Strategy: Create all items in order, tracking parent DB IDs as we go
   const allItems = lineItems as LineItem[];
-  for (let i = 0; i < childItems.length; i++) {
-    const item = childItems[i];
-    // Find parent index if this is a child
-    const originalIndex = allItems.indexOf(item);
-    let parentId: string | null = null;
+  const itemDbIds = new Map<number, string>(); // Maps original index → DB ID
+  let currentParentId: string | null = null;
 
-    // Find the last parent item before this child in the original array
-    for (let j = originalIndex - 1; j >= 0; j--) {
-      if (allItems[j].isParent) {
-        const parentIndex = parentItems.indexOf(allItems[j]);
-        parentId = itemsWithIds.get(parentIndex) || null;
-        break;
-      }
-    }
+  console.log('[Estimate Creation] Processing', allItems.length, 'line items');
 
-    await prisma.estimateLineItem.create({
+  for (let i = 0; i < allItems.length; i++) {
+    const item = allItems[i];
+
+    console.log(`[Item ${i}] ${item.description}`, {
+      isParent: item.isParent,
+      currentParentId,
+    });
+
+    // If this is a parent item, it becomes the new currentParent
+    // Children will use currentParentId until we hit another parent
+    const parentId = item.isParent ? null : currentParentId;
+
+    const created = await prisma.estimateLineItem.create({
       data: {
         estimateId: estimate.id,
         catalogItemId: item.catalogItemId || null,
@@ -117,9 +94,18 @@ export async function POST(req: NextRequest) {
         materialsCost: item.materialsCost ?? null,
         total: item.total,
         notes: item.notes || null,
-        sortOrder: parentItems.length + i,
+        sortOrder: i,
       },
     });
+
+    // Store the DB ID for this item
+    itemDbIds.set(i, created.id);
+
+    // If this item is a parent, update currentParentId for subsequent children
+    if (item.isParent) {
+      currentParentId = created.id;
+      console.log(`[Item ${i}] Set as current parent, ID: ${created.id}`);
+    }
   }
 
   // Fetch the complete estimate with line items

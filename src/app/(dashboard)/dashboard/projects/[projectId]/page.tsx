@@ -10,9 +10,11 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 interface LineItem {
   id: string;
   description: string;
-  quantity: string;
-  unit: string;
-  unitPrice: string;
+  parentId?: string | null;
+  timeHours?: string | null;
+  timeRate?: string | null;
+  timeCost?: string | null;
+  materialsCost?: string | null;
   total: string;
   category?: string;
   action?: string;
@@ -248,9 +250,8 @@ export default function ProjectDetailPage() {
                     <thead>
                       <tr className="border-b bg-muted/50 text-left">
                         <th className="px-4 py-2 font-medium">Description</th>
-                        <th className="px-4 py-2 text-right font-medium">Qty</th>
-                        <th className="px-4 py-2 font-medium">Unit</th>
-                        <th className="px-4 py-2 text-right font-medium">Rate</th>
+                        <th className="px-4 py-2 font-medium">Time</th>
+                        <th className="px-4 py-2 font-medium">Materials</th>
                         <th className="px-4 py-2 text-right font-medium">Total</th>
                       </tr>
                     </thead>
@@ -258,16 +259,27 @@ export default function ProjectDetailPage() {
                       {est.lineItems.map((item) => (
                         <tr key={item.id} className="border-b">
                           <td className="px-4 py-2">{item.description}</td>
-                          <td className="px-4 py-2 text-right">{item.quantity}</td>
-                          <td className="px-4 py-2 text-muted-foreground">{item.unit}</td>
-                          <td className="px-4 py-2 text-right">{formatCurrency(item.unitPrice)}</td>
+                          <td className="px-4 py-2 text-sm text-muted-foreground">
+                            {item.timeHours && item.timeRate ? (
+                              <span>{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</span>
+                            ) : (
+                              <span className="text-muted-foreground/50">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-muted-foreground">
+                            {item.materialsCost ? (
+                              formatCurrency(item.materialsCost)
+                            ) : (
+                              <span className="text-muted-foreground/50">—</span>
+                            )}
+                          </td>
                           <td className="px-4 py-2 text-right font-medium">{formatCurrency(item.total)}</td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot>
                       <tr className="font-medium">
-                        <td colSpan={4} className="px-4 py-3 text-right">Total</td>
+                        <td colSpan={3} className="px-4 py-3 text-right">Total</td>
                         <td className="px-4 py-3 text-right">{formatCurrency(est.total)}</td>
                       </tr>
                     </tfoot>
@@ -278,10 +290,18 @@ export default function ProjectDetailPage() {
                       <div key={item.id} className="border-b p-4 last:border-b-0">
                         <div className="mb-2 font-medium text-base">{item.description}</div>
                         <div className="grid grid-cols-2 gap-y-1.5 text-sm">
-                          <div className="text-muted-foreground">Quantity:</div>
-                          <div className="text-right">{item.quantity} {item.unit}</div>
-                          <div className="text-muted-foreground">Rate:</div>
-                          <div className="text-right">{formatCurrency(item.unitPrice)}</div>
+                          {item.timeHours && item.timeRate && (
+                            <>
+                              <div className="text-muted-foreground">Time:</div>
+                              <div className="text-right">{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</div>
+                            </>
+                          )}
+                          {item.materialsCost && (
+                            <>
+                              <div className="text-muted-foreground">Materials:</div>
+                              <div className="text-right">{formatCurrency(item.materialsCost)}</div>
+                            </>
+                          )}
                           <div className="text-muted-foreground">Total:</div>
                           <div className="text-right font-semibold">{formatCurrency(item.total)}</div>
                         </div>
@@ -332,9 +352,8 @@ export default function ProjectDetailPage() {
                       <tr className="border-b bg-muted/50 text-left">
                         <th className="px-4 py-2 font-medium">Action</th>
                         <th className="px-4 py-2 font-medium">Description</th>
-                        <th className="px-4 py-2 text-right font-medium">Qty</th>
-                        <th className="px-4 py-2 font-medium">Unit</th>
-                        <th className="px-4 py-2 text-right font-medium">Rate</th>
+                        <th className="px-4 py-2 font-medium">Time</th>
+                        <th className="px-4 py-2 font-medium">Materials</th>
                         <th className="px-4 py-2 text-right font-medium">Total</th>
                       </tr>
                     </thead>
@@ -362,9 +381,20 @@ export default function ProjectDetailPage() {
                               </span>
                             )}
                           </td>
-                          <td className="px-4 py-2 text-right">{item.quantity}</td>
-                          <td className="px-4 py-2 text-muted-foreground">{item.unit}</td>
-                          <td className="px-4 py-2 text-right">{formatCurrency(item.unitPrice)}</td>
+                          <td className="px-4 py-2 text-sm text-muted-foreground">
+                            {item.timeHours && item.timeRate ? (
+                              <span>{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</span>
+                            ) : (
+                              <span className="text-muted-foreground/50">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-muted-foreground">
+                            {item.materialsCost ? (
+                              formatCurrency(item.materialsCost)
+                            ) : (
+                              <span className="text-muted-foreground/50">—</span>
+                            )}
+                          </td>
                           <td className="px-4 py-2 text-right font-medium">{formatCurrency(item.total)}</td>
                         </tr>
                       ))}
@@ -396,10 +426,18 @@ export default function ProjectDetailPage() {
                           )}
                         </div>
                         <div className="grid grid-cols-2 gap-y-1.5 text-sm">
-                          <div className="text-muted-foreground">Quantity:</div>
-                          <div className="text-right">{item.quantity} {item.unit}</div>
-                          <div className="text-muted-foreground">Rate:</div>
-                          <div className="text-right">{formatCurrency(item.unitPrice)}</div>
+                          {item.timeHours && item.timeRate && (
+                            <>
+                              <div className="text-muted-foreground">Time:</div>
+                              <div className="text-right">{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</div>
+                            </>
+                          )}
+                          {item.materialsCost && (
+                            <>
+                              <div className="text-muted-foreground">Materials:</div>
+                              <div className="text-right">{formatCurrency(item.materialsCost)}</div>
+                            </>
+                          )}
                           <div className="text-muted-foreground">Total:</div>
                           <div className="text-right font-semibold">{formatCurrency(item.total)}</div>
                         </div>
@@ -456,9 +494,8 @@ export default function ProjectDetailPage() {
                     <thead>
                       <tr className="border-b bg-muted/50 text-left">
                         <th className="px-4 py-2 font-medium">Description</th>
-                        <th className="px-4 py-2 text-right font-medium">Qty</th>
-                        <th className="px-4 py-2 font-medium">Unit</th>
-                        <th className="px-4 py-2 text-right font-medium">Rate</th>
+                        <th className="px-4 py-2 font-medium">Time</th>
+                        <th className="px-4 py-2 font-medium">Materials</th>
                         <th className="px-4 py-2 text-right font-medium">Total</th>
                       </tr>
                     </thead>
@@ -466,16 +503,27 @@ export default function ProjectDetailPage() {
                       {inv.lineItems.map((item) => (
                         <tr key={item.id} className="border-b">
                           <td className="px-4 py-2">{item.description}</td>
-                          <td className="px-4 py-2 text-right">{item.quantity}</td>
-                          <td className="px-4 py-2 text-muted-foreground">{item.unit}</td>
-                          <td className="px-4 py-2 text-right">{formatCurrency(item.unitPrice)}</td>
+                          <td className="px-4 py-2 text-sm text-muted-foreground">
+                            {item.timeHours && item.timeRate ? (
+                              <span>{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</span>
+                            ) : (
+                              <span className="text-muted-foreground/50">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-muted-foreground">
+                            {item.materialsCost ? (
+                              formatCurrency(item.materialsCost)
+                            ) : (
+                              <span className="text-muted-foreground/50">—</span>
+                            )}
+                          </td>
                           <td className="px-4 py-2 text-right font-medium">{formatCurrency(item.total)}</td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot>
                       <tr className="font-medium">
-                        <td colSpan={4} className="px-4 py-3 text-right">Total</td>
+                        <td colSpan={3} className="px-4 py-3 text-right">Total</td>
                         <td className="px-4 py-3 text-right">{formatCurrency(inv.total)}</td>
                       </tr>
                     </tfoot>
@@ -486,10 +534,18 @@ export default function ProjectDetailPage() {
                       <div key={item.id} className="border-b p-4 last:border-b-0">
                         <div className="mb-2 font-medium text-base">{item.description}</div>
                         <div className="grid grid-cols-2 gap-y-1.5 text-sm">
-                          <div className="text-muted-foreground">Quantity:</div>
-                          <div className="text-right">{item.quantity} {item.unit}</div>
-                          <div className="text-muted-foreground">Rate:</div>
-                          <div className="text-right">{formatCurrency(item.unitPrice)}</div>
+                          {item.timeHours && item.timeRate && (
+                            <>
+                              <div className="text-muted-foreground">Time:</div>
+                              <div className="text-right">{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</div>
+                            </>
+                          )}
+                          {item.materialsCost && (
+                            <>
+                              <div className="text-muted-foreground">Materials:</div>
+                              <div className="text-right">{formatCurrency(item.materialsCost)}</div>
+                            </>
+                          )}
                           <div className="text-muted-foreground">Total:</div>
                           <div className="text-right font-semibold">{formatCurrency(item.total)}</div>
                         </div>
