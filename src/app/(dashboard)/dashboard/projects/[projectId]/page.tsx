@@ -533,6 +533,7 @@ export default function ProjectDetailPage() {
                             </div>
                           </div>
                         </div>
+                      </div>
                       );
                     })}
                     <div className="border-t bg-muted/30 p-4">
