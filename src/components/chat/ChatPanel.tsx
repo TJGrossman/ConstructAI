@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { StructuredPreview } from "./StructuredPreview";
+import { LineItem } from "@/lib/ai/processor";
 
 interface Message {
   id: string;
@@ -12,19 +13,9 @@ interface Message {
   createdAt: string;
   metadata?: {
     structured?: {
-      type: "estimate" | "change_order" | "invoice";
+      type: "estimate" | "change_order" | "invoice" | "work_entry";
       title?: string;
-      lineItems: Array<{
-        description: string;
-        catalogItemId?: string;
-        quantity: number;
-        unit: string;
-        unitPrice: number;
-        total: number;
-        category?: string;
-        action?: string;
-        originalDesc?: string;
-      }>;
+      lineItems: LineItem[];
       notes?: string;
     };
   };
@@ -122,17 +113,7 @@ export function ChatPanel({
   };
 
   const handleApprove = async (
-    lineItems: Array<{
-      description: string;
-      catalogItemId?: string;
-      quantity: number;
-      unit: string;
-      unitPrice: number;
-      total: number;
-      category?: string;
-      action?: string;
-      originalDesc?: string;
-    }>,
+    lineItems: LineItem[],
     title: string,
     notes: string
   ) => {
