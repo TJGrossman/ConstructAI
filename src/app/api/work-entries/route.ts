@@ -14,6 +14,8 @@ export async function POST(req: NextRequest) {
   const userId = (session.user as { id: string }).id;
   const { projectId, workEntries } = await req.json();
 
+  console.log('[Work Entries] Received:', { projectId, workEntriesCount: workEntries?.length, workEntries });
+
   if (!projectId || !workEntries?.length) {
     return NextResponse.json(
       { error: "projectId and workEntries are required" },
@@ -59,11 +61,16 @@ export async function POST(req: NextRequest) {
 
   // Add work entries to invoice
   for (const entry of workEntries) {
+    console.log('[Work Entry] Processing entry:', entry);
+
     const estimateLineItem = await prisma.estimateLineItem.findUnique({
       where: { id: entry.estimateLineItemId },
     });
 
+    console.log('[Work Entry] Found estimate line item:', estimateLineItem);
+
     if (!estimateLineItem) {
+      console.log('[Work Entry] Skipping - estimate line item not found for ID:', entry.estimateLineItemId);
       continue; // Skip if estimate line item not found
     }
 
@@ -111,7 +118,11 @@ export async function POST(req: NextRequest) {
     where: { invoiceId: invoice.id },
   });
 
+  console.log('[Work Entry] All invoice line items:', allLineItems);
+
   const subtotal = allLineItems.reduce((sum, item) => sum + Number(item.total), 0);
+
+  console.log('[Work Entry] Calculated subtotal:', subtotal);
 
   // Get user's tax rate
   const user = await prisma.user.findUnique({ where: { id: userId } });
