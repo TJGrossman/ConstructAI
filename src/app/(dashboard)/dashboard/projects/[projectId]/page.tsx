@@ -106,6 +106,7 @@ export default function ProjectDetailPage() {
     currentX: 0,
     isDragging: false,
   });
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
   const fetchProject = useCallback(async () => {
     try {
@@ -113,29 +114,46 @@ export default function ProjectDetailPage() {
       if (res.ok) {
         const data = await res.json();
         setProject(data);
-        // Expand parent items by default on desktop only (collapsed on mobile)
-        const isMobile = window.innerWidth < 1024; // lg breakpoint
-        const parentIds = new Set<string>();
 
-        if (!isMobile) {
-          data.estimates?.forEach((est: Estimate) => {
-            est.lineItems?.forEach((item: LineItem) => {
-              if (!item.parentId) parentIds.add(item.id);
+        // Try to restore expanded state from localStorage
+        const savedExpandedState = localStorage.getItem(`expandedParents_${projectId}`);
+
+        if (savedExpandedState) {
+          // Restore from localStorage
+          setExpandedParents(new Set(JSON.parse(savedExpandedState)));
+        } else {
+          // Default: expand parent items on desktop only (collapsed on mobile)
+          const isMobile = window.innerWidth < 1024; // lg breakpoint
+          const parentIds = new Set<string>();
+
+          if (!isMobile) {
+            data.estimates?.forEach((est: Estimate) => {
+              est.lineItems?.forEach((item: LineItem) => {
+                if (!item.parentId) parentIds.add(item.id);
+              });
             });
-          });
-          data.changeOrders?.forEach((co: ChangeOrder) => {
-            co.lineItems?.forEach((item: LineItem) => {
-              if (!item.parentId) parentIds.add(item.id);
+            data.changeOrders?.forEach((co: ChangeOrder) => {
+              co.lineItems?.forEach((item: LineItem) => {
+                if (!item.parentId) parentIds.add(item.id);
+              });
             });
-          });
-          data.invoices?.forEach((inv: Invoice) => {
-            inv.lineItems?.forEach((item: LineItem) => {
-              if (!item.parentId) parentIds.add(item.id);
+            data.invoices?.forEach((inv: Invoice) => {
+              inv.lineItems?.forEach((item: LineItem) => {
+                if (!item.parentId) parentIds.add(item.id);
+              });
             });
-          });
+          }
+
+          setExpandedParents(parentIds);
         }
 
-        setExpandedParents(parentIds);
+        // Restore scroll position
+        setTimeout(() => {
+          const savedScrollPos = localStorage.getItem(`scrollPos_${projectId}`);
+          if (savedScrollPos) {
+            window.scrollTo(0, parseInt(savedScrollPos));
+          }
+        }, 100);
       }
     } finally {
       setLoading(false);
@@ -154,6 +172,8 @@ export default function ProjectDetailPage() {
       } else {
         next.add(parentId);
       }
+      // Save to localStorage
+      localStorage.setItem(`expandedParents_${projectId}`, JSON.stringify([...next]));
       return next;
     });
   };
@@ -199,17 +219,24 @@ export default function ProjectDetailPage() {
     const screenWidth = window.innerWidth;
     const swipePercentage = swipeDistance / screenWidth;
 
-    // Delete if swiped more than 50% (lowered from 70%)
+    // Delete if swiped more than 50%
     if (swipePercentage > 0.5) {
-      // Keep swipe state briefly to show animation
-      setTimeout(() => {
-        setSwipeState({
-          itemId: null,
-          startX: 0,
-          currentX: 0,
-          isDragging: false,
-        });
-      }, 300);
+      // Trigger delete animation
+      setDeletingItemId(itemId);
+      setSwipeState({
+        itemId: null,
+        startX: 0,
+        currentX: 0,
+        isDragging: false,
+      });
+
+      // Save scroll position and expanded state to localStorage
+      localStorage.setItem(`scrollPos_${projectId}`, window.scrollY.toString());
+      localStorage.setItem(`expandedParents_${projectId}`, JSON.stringify([...expandedParents]));
+
+      // Wait for animation to complete
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       // Optimistically remove from UI
       const updatedLineItems = estimate.lineItems.filter((item) => item.id !== itemId);
 
@@ -234,11 +261,11 @@ export default function ProjectDetailPage() {
           }),
         });
 
-        // Refresh project data
+        // Refresh project data (will restore state from localStorage)
         fetchProject();
       } catch (error) {
         console.error("Failed to delete item:", error);
-        // Refresh to revert optimistic update
+        setDeletingItemId(null);
         fetchProject();
       }
     } else {
@@ -473,8 +500,10 @@ export default function ProjectDetailPage() {
                       }
 
                       // Calculate swipe offset
-                      const swipeOffset =
-                        swipeState.isDragging && swipeState.itemId === item.id
+                      const isDeleting = deletingItemId === item.id;
+                      const swipeOffset = isDeleting
+                        ? window.innerWidth
+                        : swipeState.isDragging && swipeState.itemId === item.id
                           ? Math.max(0, swipeState.startX - swipeState.currentX)
                           : 0;
                       const swipePercentage = swipeOffset / window.innerWidth;
@@ -498,7 +527,11 @@ export default function ProjectDetailPage() {
                             className={`border-b p-4 last:border-b-0 ${isParent ? "bg-muted/30" : "bg-background"} ${isChild ? "pl-8" : ""}`}
                             style={{
                               transform: isChild ? `translateX(-${swipeOffset}px)` : undefined,
-                              transition: swipeState.isDragging ? 'none' : 'transform 0.2s ease-out',
+                              transition: swipeState.isDragging
+                                ? 'none'
+                                : isDeleting
+                                  ? 'transform 0.3s ease-in-out'
+                                  : 'transform 0.2s ease-out',
                             }}
                             onTouchStart={isChild ? (e) => handleTouchStart(e, item.id) : undefined}
                             onTouchMove={isChild ? handleTouchMove : undefined}
