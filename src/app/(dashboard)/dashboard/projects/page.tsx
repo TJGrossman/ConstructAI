@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { Plus, FolderOpen } from "lucide-react";
+import { ResetDataButton } from "@/components/admin/ResetDataButton";
 
 export const dynamic = 'force-dynamic';
 
@@ -29,12 +30,15 @@ export default async function ProjectsPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Projects</h1>
-        <Link
-          href="/dashboard/projects/new"
-          className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          <Plus className="h-4 w-4" /> New Project
-        </Link>
+        <div className="flex items-center gap-2">
+          <ResetDataButton />
+          <Link
+            href="/dashboard/projects/new"
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4" /> New Project
+          </Link>
+        </div>
       </div>
 
       {projects.length === 0 ? (
