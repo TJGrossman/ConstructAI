@@ -75,33 +75,75 @@ export async function PATCH(
     });
 
     // Recreate line items with hierarchy
+    // First pass: create parents and track their old->new ID mapping
     const allItems = data.lineItems as LineItem[];
-    let currentParentId: string | null = null;
+    const parentIdMap = new Map<string, string>(); // old parentId -> new parentId
 
-    for (let i = 0; i < allItems.length; i++) {
-      const item = allItems[i];
-      const parentId: string | null = item.isParent ? null : currentParentId;
-
+    // Create parent items first
+    const parentItems = allItems.filter(item => item.isParent);
+    for (let i = 0; i < parentItems.length; i++) {
+      const item = parentItems[i];
       const created: { id: string } = await prisma.estimateLineItem.create({
         data: {
           estimateId: params.estimateId,
           catalogItemId: item.catalogItemId || null,
           description: item.description,
           category: item.category || null,
-          parentId,
+          parentId: null,
           timeHours: item.timeHours ?? null,
           timeRate: item.timeRate ?? null,
           timeCost: item.timeCost ?? null,
           materialsCost: item.materialsCost ?? null,
           total: item.total,
           notes: item.notes || null,
-          sortOrder: i,
+          sortOrder: allItems.indexOf(item),
         },
       });
 
-      if (item.isParent) {
-        currentParentId = created.id;
+      // Map old parent ID to new parent ID
+      if (item.parentId) {
+        parentIdMap.set(item.parentId, created.id);
       }
+      // Also map by description as fallback
+      parentIdMap.set(item.description, created.id);
+    }
+
+    // Second pass: create children with correct parent references
+    const childItems = allItems.filter(item => !item.isParent);
+    for (const item of childItems) {
+      // Find the correct parent ID
+      let newParentId: string | null = null;
+      if (item.parentId) {
+        newParentId = parentIdMap.get(item.parentId) || null;
+      }
+
+      // If not found by ID, find parent by looking backwards in original array
+      if (!newParentId) {
+        const itemIndex = allItems.indexOf(item);
+        for (let i = itemIndex - 1; i >= 0; i--) {
+          if (allItems[i].isParent) {
+            newParentId = parentIdMap.get(allItems[i].description) || null;
+            break;
+          }
+        }
+      }
+
+      await prisma.estimateLineItem.create({
+        data: {
+          estimateId: params.estimateId,
+          catalogItemId: item.catalogItemId || null,
+          description: item.description,
+          category: item.category || null,
+          parentId: newParentId,
+          timeHours: item.timeHours ?? null,
+          timeRate: item.timeRate ?? null,
+          timeCost: item.timeCost ?? null,
+          materialsCost: item.materialsCost ?? null,
+          total: item.total,
+          notes: item.notes || null,
+          sortOrder: allItems.indexOf(item),
+        },
+      });
     }
 
     // Update estimate totals
