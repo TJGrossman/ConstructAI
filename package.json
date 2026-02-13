@@ -11,7 +11,8 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "npx tsx prisma/seed.ts",
-    "create-admin": "npx tsx scripts/create-admin-user.ts"
+    "create-admin": "npx tsx scripts/create-admin-user.ts",
+    "recalculate-totals": "npx tsx scripts/recalculate-totals.ts"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

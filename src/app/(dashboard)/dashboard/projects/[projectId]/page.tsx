@@ -28,6 +28,8 @@ interface Estimate {
   title: string;
   status: string;
   subtotal: string;
+  taxRate: string;
+  taxAmount: string;
   total: string;
   createdAt: string;
   lineItems: LineItem[];
@@ -49,6 +51,8 @@ interface Invoice {
   number: number;
   status: string;
   subtotal: string;
+  taxRate: string;
+  taxAmount: string;
   total: string;
   dueDate: string | null;
   paidAt: string | null;
@@ -875,8 +879,18 @@ export default function ProjectDetailPage() {
                         </button>
                       </div>
                     )}
-                    <div className="border-t bg-muted/30 p-4">
-                      <div className="flex justify-between font-semibold text-base">
+                    <div className="border-t bg-muted/30 p-4 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span>{formatCurrency(est.subtotal)}</span>
+                      </div>
+                      {Number(est.taxRate) > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Tax ({est.taxRate}%)</span>
+                          <span>{formatCurrency(est.taxAmount)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-semibold text-base border-t pt-2">
                         <span>Total</span>
                         <span>{formatCurrency(est.total)}</span>
                       </div>
@@ -1428,8 +1442,18 @@ export default function ProjectDetailPage() {
                         </button>
                       </div>
                     )}
-                    <div className="border-t bg-muted/30 p-4">
-                      <div className="flex justify-between font-semibold text-base">
+                    <div className="border-t bg-muted/30 p-4 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span>{formatCurrency(inv.subtotal)}</span>
+                      </div>
+                      {Number(inv.taxRate) > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Tax ({inv.taxRate}%)</span>
+                          <span>{formatCurrency(inv.taxAmount)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-semibold text-base border-t pt-2">
                         <span>Total</span>
                         <span>{formatCurrency(inv.total)}</span>
                       </div>
