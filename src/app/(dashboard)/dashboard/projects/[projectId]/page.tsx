@@ -243,7 +243,8 @@ export default function ProjectDetailPage() {
                       )}
                     </div>
                   </div>
-                  <table className="w-full text-sm">
+                  {/* Desktop table view */}
+                  <table className="hidden w-full text-sm lg:table">
                     <thead>
                       <tr className="border-b bg-muted/50 text-left">
                         <th className="px-4 py-2 font-medium">Description</th>
@@ -271,6 +272,28 @@ export default function ProjectDetailPage() {
                       </tr>
                     </tfoot>
                   </table>
+                  {/* Mobile card view */}
+                  <div className="lg:hidden">
+                    {est.lineItems.map((item) => (
+                      <div key={item.id} className="border-b p-4 last:border-b-0">
+                        <div className="mb-2 font-medium text-base">{item.description}</div>
+                        <div className="grid grid-cols-2 gap-y-1.5 text-sm">
+                          <div className="text-muted-foreground">Quantity:</div>
+                          <div className="text-right">{item.quantity} {item.unit}</div>
+                          <div className="text-muted-foreground">Rate:</div>
+                          <div className="text-right">{formatCurrency(item.unitPrice)}</div>
+                          <div className="text-muted-foreground">Total:</div>
+                          <div className="text-right font-semibold">{formatCurrency(item.total)}</div>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="border-t bg-muted/30 p-4">
+                      <div className="flex justify-between font-semibold text-base">
+                        <span>Total</span>
+                        <span>{formatCurrency(est.total)}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))
             )}
@@ -303,7 +326,8 @@ export default function ProjectDetailPage() {
                       {co.status}
                     </span>
                   </div>
-                  <table className="w-full text-sm">
+                  {/* Desktop table view */}
+                  <table className="hidden w-full text-sm lg:table">
                     <thead>
                       <tr className="border-b bg-muted/50 text-left">
                         <th className="px-4 py-2 font-medium">Action</th>
@@ -346,6 +370,42 @@ export default function ProjectDetailPage() {
                       ))}
                     </tbody>
                   </table>
+                  {/* Mobile card view */}
+                  <div className="lg:hidden">
+                    {co.lineItems.map((item) => (
+                      <div key={item.id} className="border-b p-4 last:border-b-0">
+                        <div className="mb-2 flex items-start gap-2">
+                          <span
+                            className={`rounded px-2 py-1 text-xs font-medium ${
+                              item.action === "add"
+                                ? "bg-green-100 text-green-700"
+                                : item.action === "remove"
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-yellow-100 text-yellow-700"
+                            }`}
+                          >
+                            {item.action}
+                          </span>
+                        </div>
+                        <div className="mb-2 font-medium text-base">
+                          {item.description}
+                          {item.originalDesc && (
+                            <div className="mt-1 text-sm text-muted-foreground line-through">
+                              {item.originalDesc}
+                            </div>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-y-1.5 text-sm">
+                          <div className="text-muted-foreground">Quantity:</div>
+                          <div className="text-right">{item.quantity} {item.unit}</div>
+                          <div className="text-muted-foreground">Rate:</div>
+                          <div className="text-right">{formatCurrency(item.unitPrice)}</div>
+                          <div className="text-muted-foreground">Total:</div>
+                          <div className="text-right font-semibold">{formatCurrency(item.total)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))
             )}
@@ -391,7 +451,8 @@ export default function ProjectDetailPage() {
                       )}
                     </div>
                   </div>
-                  <table className="w-full text-sm">
+                  {/* Desktop table view */}
+                  <table className="hidden w-full text-sm lg:table">
                     <thead>
                       <tr className="border-b bg-muted/50 text-left">
                         <th className="px-4 py-2 font-medium">Description</th>
@@ -419,6 +480,28 @@ export default function ProjectDetailPage() {
                       </tr>
                     </tfoot>
                   </table>
+                  {/* Mobile card view */}
+                  <div className="lg:hidden">
+                    {inv.lineItems.map((item) => (
+                      <div key={item.id} className="border-b p-4 last:border-b-0">
+                        <div className="mb-2 font-medium text-base">{item.description}</div>
+                        <div className="grid grid-cols-2 gap-y-1.5 text-sm">
+                          <div className="text-muted-foreground">Quantity:</div>
+                          <div className="text-right">{item.quantity} {item.unit}</div>
+                          <div className="text-muted-foreground">Rate:</div>
+                          <div className="text-right">{formatCurrency(item.unitPrice)}</div>
+                          <div className="text-muted-foreground">Total:</div>
+                          <div className="text-right font-semibold">{formatCurrency(item.total)}</div>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="border-t bg-muted/30 p-4">
+                      <div className="flex justify-between font-semibold text-base">
+                        <span>Total</span>
+                        <span>{formatCurrency(inv.total)}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))
             )}
