@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Upload, Mic, MicOff, X } from "lucide-react";
+import { Upload, Mic, MicOff } from "lucide-react";
 import { useVoiceRecording } from "@/hooks/useVoiceRecording";
 
 interface ReceiptUploadProps {

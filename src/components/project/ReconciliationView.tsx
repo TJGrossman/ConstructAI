@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { TrendingUp, TrendingDown, AlertCircle, CheckCircle2 } from "lucide-react";
 
@@ -44,11 +44,7 @@ export function ReconciliationView({ projectId }: ReconciliationViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchReconciliation();
-  }, [projectId]);
-
-  const fetchReconciliation = async () => {
+  const fetchReconciliation = useCallback(async () => {
     try {
       const response = await fetch(`/api/projects/${projectId}/reconciliation`);
       if (!response.ok) throw new Error("Failed to fetch reconciliation data");
@@ -59,7 +55,11 @@ export function ReconciliationView({ projectId }: ReconciliationViewProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
+
+  useEffect(() => {
+    fetchReconciliation();
+  }, [fetchReconciliation]);
 
   if (loading) {
     return (
