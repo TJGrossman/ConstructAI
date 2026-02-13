@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, Save, Plus, Trash2 } from "lucide-react";
+import { Loader2, Save, Plus, Trash2, Mic, MicOff } from "lucide-react";
+import { useVoiceRecording } from "@/hooks/useVoiceRecording";
 
 interface CatalogItem {
   id: string;
@@ -27,6 +28,13 @@ export default function SettingsPage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingCatalog, setIsSavingCatalog] = useState(false);
   const [tab, setTab] = useState<"profile" | "catalog">("profile");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [voiceEdit, setVoiceEdit] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const { isRecording, isSupported, toggleRecording } = useVoiceRecording({
+    onTranscriptChange: setVoiceEdit,
+  });
 
   useEffect(() => {
     fetch("/api/settings")
@@ -81,6 +89,42 @@ export default function SettingsPage() {
     setCatalogItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
     );
+  };
+
+  const handleVoiceEdit = async () => {
+    if (!voiceEdit.trim()) return;
+    setIsGenerating(true);
+    try {
+      const res = await fetch("/api/ai/catalog", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: voiceEdit,
+          existingItems: catalogItems.map(item => ({
+            name: item.name,
+            category: item.category,
+            unit: item.unit,
+            defaultRate: parseFloat(item.defaultRate)
+          }))
+        }),
+      });
+      const data = await res.json();
+      if (data.items) {
+        // Merge AI results with existing IDs
+        const updatedItems = data.items.map((aiItem: any, idx: number) => {
+          const existingItem = catalogItems[idx];
+          return existingItem
+            ? { ...existingItem, ...aiItem, defaultRate: aiItem.defaultRate.toString() }
+            : { id: `new-${Date.now()}-${idx}`, ...aiItem, defaultRate: aiItem.defaultRate.toString(), description: null, isActive: true };
+        });
+        setCatalogItems(updatedItems);
+      }
+      setVoiceEdit("");
+    } catch {
+      // handled
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -191,50 +235,150 @@ export default function SettingsPage() {
       )}
 
       {tab === "catalog" && (
-        <div className="space-y-3">
-          {catalogItems.map((item) => (
-            <div key={item.id} className="rounded-lg border bg-card p-4">
-              <div className="grid gap-3 sm:grid-cols-5">
-                <div className="sm:col-span-2">
-                  <label className="text-xs font-medium text-muted-foreground">Name</label>
-                  <input
-                    type="text"
-                    value={item.name}
-                    onChange={(e) => updateCatalogItem(item.id, { name: e.target.value })}
-                    className="mt-1 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Unit</label>
-                  <input
-                    type="text"
-                    value={item.unit}
-                    onChange={(e) => updateCatalogItem(item.id, { unit: e.target.value })}
-                    className="mt-1 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Rate ($)</label>
-                  <input
-                    type="number"
-                    value={item.defaultRate}
-                    onChange={(e) => updateCatalogItem(item.id, { defaultRate: e.target.value })}
-                    className="mt-1 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-                    step="0.01"
-                  />
-                </div>
-                <div className="flex items-end">
-                  <button
-                    onClick={() => setCatalogItems((prev) => prev.filter((i) => i.id !== item.id))}
-                    className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
+        <div>
+          {/* Voice Edit Input */}
+          <div className="relative mb-6">
+            <div className="flex gap-2">
+              <input
+                value={voiceEdit}
+                onChange={(e) => setVoiceEdit(e.target.value)}
+                placeholder="Add or modify services via voice or text (e.g., 'Add drywall repair at $60/hour' or 'Change tile work to $100/hour')"
+                className={`flex-1 rounded-md border bg-background px-4 py-3 text-base placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:text-sm ${
+                  isRecording ? "border-destructive ring-2 ring-destructive/50" : "border-input"
+                }`}
+              />
+              {isSupported && (
+                <button
+                  onClick={toggleRecording}
+                  disabled={isGenerating}
+                  className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border text-sm transition-colors ${
+                    isRecording
+                      ? "border-destructive bg-destructive text-destructive-foreground"
+                      : "border-input bg-background hover:bg-accent"
+                  }`}
+                  type="button"
+                  aria-label={isRecording ? "Stop recording" : "Start recording"}
+                >
+                  {isRecording ? (
+                    <MicOff className="h-5 w-5 animate-pulse" />
+                  ) : (
+                    <Mic className="h-5 w-5" />
+                  )}
+                </button>
+              )}
+              <button
+                onClick={handleVoiceEdit}
+                disabled={!voiceEdit.trim() || isGenerating}
+                className="inline-flex shrink-0 items-center gap-2 rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {isGenerating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+              </button>
             </div>
-          ))}
-          <div className="flex gap-3">
+            {isRecording && (
+              <p className="mt-2 text-sm text-destructive">
+                🎙️ Recording... Speak your changes naturally.
+              </p>
+            )}
+          </div>
+
+          {/* Compact Service List */}
+          <div className="space-y-2">
+            {catalogItems.map((item) => (
+              <div key={item.id} className="rounded-lg border bg-card overflow-hidden">
+                {/* Compact View */}
+                {editingId !== item.id ? (
+                  <div
+                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-accent/50 transition-colors"
+                    onClick={() => setEditingId(item.id)}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-baseline gap-3">
+                        <span className="font-medium">{item.name}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {item.category?.replace(/_/g, " ")}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-sm text-muted-foreground">
+                        ${parseFloat(item.defaultRate || "0").toFixed(2)} / {item.unit.replace(/_/g, " ")}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCatalogItems((prev) => prev.filter((i) => i.id !== item.id));
+                        }}
+                        className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Expanded Edit View */
+                  <div className="p-4 space-y-3 bg-accent/20">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Name</label>
+                        <input
+                          type="text"
+                          value={item.name}
+                          onChange={(e) => updateCatalogItem(item.id, { name: e.target.value })}
+                          className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Category</label>
+                        <input
+                          type="text"
+                          value={item.category || ""}
+                          onChange={(e) => updateCatalogItem(item.id, { category: e.target.value })}
+                          className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Rate ($)</label>
+                        <input
+                          type="number"
+                          value={item.defaultRate}
+                          onChange={(e) => updateCatalogItem(item.id, { defaultRate: e.target.value })}
+                          className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm"
+                          step="0.01"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Unit</label>
+                        <input
+                          type="text"
+                          value={item.unit}
+                          onChange={(e) => updateCatalogItem(item.id, { unit: e.target.value })}
+                          className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Done editing
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {catalogItems.length === 0 && (
+            <div className="rounded-lg border-2 border-dashed p-8 text-center text-muted-foreground">
+              <p>No services yet. Use voice or text above to add services.</p>
+            </div>
+          )}
+
+          <div className="mt-4 flex gap-3">
             <button
               onClick={() =>
                 setCatalogItems((prev) => [
@@ -244,7 +388,7 @@ export default function SettingsPage() {
               }
               className="inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium hover:bg-accent"
             >
-              <Plus className="h-4 w-4" /> Add Item
+              <Plus className="h-4 w-4" /> Add Item Manually
             </button>
             <button
               onClick={saveCatalog}
