@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
  * Preserves: User accounts, ServiceCatalogItems
  * Clears: Projects, Estimates, Invoices, Messages, etc.
  */
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -97,8 +97,6 @@ export async function POST(req: NextRequest) {
     console.log('[Reset Data] Deleted invoices');
 
     // 6. Delete customers and projects
-    const projectIdsToDelete = await getProjectIds(userId);
-
     await prisma.project.deleteMany({
       where: { userId }
     });

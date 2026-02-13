@@ -4,8 +4,9 @@ import { useState } from "react";
 import { Trash2 } from "lucide-react";
 
 export function ResetDataButton({ isDemoAccount }: { isDemoAccount: boolean }) {
-  if (!isDemoAccount) return null;
   const [isLoading, setIsLoading] = useState(false);
+
+  if (!isDemoAccount) return null;
 
   const handleReset = async () => {
     if (!confirm("⚠️ This will DELETE ALL test data (projects, estimates, invoices, messages). Your account and service catalog will be preserved. Continue?")) {

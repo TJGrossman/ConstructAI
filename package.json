@@ -10,7 +10,8 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "npx tsx prisma/seed.ts"
+    "db:seed": "npx tsx prisma/seed.ts",
+    "create-admin": "npx tsx scripts/create-admin-user.ts"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
