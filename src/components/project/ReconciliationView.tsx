@@ -239,8 +239,8 @@ export function ReconciliationView({ projectId }: ReconciliationViewProps) {
                         </div>
                       )}
                     </td>
-                    <td className={`px-4 py-2 text-right ${item.variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {item.variance >= 0 ? '+' : ''}{formatCurrency(item.variance)}
+                    <td className={`px-4 py-2 text-right ${item.variance <= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(item.variance)}
                     </td>
                   </tr>
                   {hasChildren && isExpanded && item.children!.map((child) => (
@@ -283,8 +283,8 @@ export function ReconciliationView({ projectId }: ReconciliationViewProps) {
                           </div>
                         )}
                       </td>
-                      <td className={`px-4 py-2 text-right ${child.variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {child.variance >= 0 ? '+' : ''}{formatCurrency(child.variance)}
+                      <td className={`px-4 py-2 text-right ${child.variance <= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatCurrency(child.variance)}
                       </td>
                     </tr>
                   ))}
@@ -325,8 +325,8 @@ export function ReconciliationView({ projectId }: ReconciliationViewProps) {
                     <div className="text-muted-foreground">Invoiced:</div>
                     <div className="text-right">{formatCurrency(item.invoicedCost)}</div>
                     <div className="text-muted-foreground">Variance:</div>
-                    <div className={`text-right font-semibold ${item.variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {item.variance >= 0 ? '+' : ''}{formatCurrency(item.variance)}
+                    <div className={`text-right font-semibold ${item.variance <= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(item.variance)}
                     </div>
                   </div>
                   {item.invoices.length > 0 && (
@@ -372,8 +372,8 @@ export function ReconciliationView({ projectId }: ReconciliationViewProps) {
                       <div className="text-muted-foreground">Invoiced:</div>
                       <div className="text-right">{formatCurrency(child.invoicedCost)}</div>
                       <div className="text-muted-foreground">Variance:</div>
-                      <div className={`text-right font-semibold ${child.variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {child.variance >= 0 ? '+' : ''}{formatCurrency(child.variance)}
+                      <div className={`text-right font-semibold ${child.variance <= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatCurrency(child.variance)}
                       </div>
                     </div>
                     {child.invoices.length > 0 && (

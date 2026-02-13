@@ -150,7 +150,8 @@ export async function GET(
   });
 
   lineItemMap.forEach((item) => {
-    item.variance = item.adjustedCost - item.invoicedCost;
+    // Variance = Actual - Budget (negative = under budget = good)
+    item.variance = item.invoicedCost - item.adjustedCost;
     item.variancePercent = item.adjustedCost > 0 ? (item.variance / item.adjustedCost) * 100 : 0;
   });
 
@@ -164,7 +165,8 @@ export async function GET(
         item.estimatedCost = children.reduce((sum, c) => sum + c.estimatedCost, 0);
         item.adjustedCost = children.reduce((sum, c) => sum + c.adjustedCost, 0);
         item.invoicedCost = children.reduce((sum, c) => sum + c.invoicedCost, 0);
-        item.variance = item.adjustedCost - item.invoicedCost;
+        // Variance = Actual - Budget (negative = under budget = good)
+        item.variance = item.invoicedCost - item.adjustedCost;
         item.variancePercent = item.adjustedCost > 0 ? (item.variance / item.adjustedCost) * 100 : 0;
         item.changeOrders = children.flatMap((c) => c.changeOrders);
         item.invoices = children.flatMap((c) => c.invoices);
@@ -186,7 +188,8 @@ export async function GET(
   const paidTotal = project.invoices.filter((inv) => inv.status === 'paid').reduce((sum, inv) => sum + Number(inv.total), 0);
   const unpaidTotal = invoicedTotal - paidTotal;
   const remainingBudget = estimatedCost - invoicedTotal;
-  const variance = estimatedCost - invoicedTotal;
+  // Variance = Actual - Budget (negative = under budget = good)
+  const variance = invoicedTotal - estimatedCost;
   const variancePercent = estimatedCost > 0 ? (variance / estimatedCost) * 100 : 0;
 
   console.log('[Reconciliation] Calculated totals:', {

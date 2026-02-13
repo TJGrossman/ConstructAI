@@ -158,9 +158,17 @@ export async function POST(req: NextRequest) {
     where: { invoiceId: invoice.id },
   });
 
-  console.log('[Work Entry] All invoice line items:', allLineItems);
+  console.log('[Work Entry] All invoice line items:', allLineItems.map(item => ({
+    id: item.id,
+    description: item.description,
+    total: item.total,
+    estimateLineItemId: item.estimateLineItemId
+  })));
 
-  const subtotal = allLineItems.reduce((sum, item) => sum + Number(item.total), 0);
+  const subtotal = allLineItems.reduce((sum, item) => {
+    console.log(`[Work Entry] Adding item total: ${item.total}, running sum: ${sum + Number(item.total)}`);
+    return sum + Number(item.total);
+  }, 0);
 
   console.log('[Work Entry] Calculated subtotal:', subtotal);
 
