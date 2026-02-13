@@ -216,7 +216,7 @@ export default function ProjectDetailPage() {
     }));
   };
 
-  const handleTouchEnd = async (estimateId: string, itemId: string) => {
+  const handleTouchEnd = async (type: 'estimate' | 'invoice', documentId: string, itemId: string) => {
     if (!swipeState.isDragging) return;
 
     const swipeDistance = swipeState.startX - swipeState.currentX;
@@ -239,7 +239,10 @@ export default function ProjectDetailPage() {
 
       // Call API to delete the specific line item
       try {
-        await fetch(`/api/estimates/${estimateId}/line-items/${itemId}`, {
+        const endpoint = type === 'estimate'
+          ? `/api/estimates/${documentId}/line-items/${itemId}`
+          : `/api/invoices/${documentId}/line-items/${itemId}`;
+        await fetch(endpoint, {
           method: "DELETE",
         });
 
@@ -755,7 +758,7 @@ export default function ProjectDetailPage() {
                             }}
                             onTouchStart={isChild ? (e) => handleTouchStart(e, item.id) : undefined}
                             onTouchMove={isChild ? handleTouchMove : undefined}
-                            onTouchEnd={isChild ? () => handleTouchEnd(est.id, item.id) : undefined}
+                            onTouchEnd={isChild ? () => handleTouchEnd('estimate', est.id, item.id) : undefined}
                           >
                           <div className="flex items-center justify-between mb-2">
                             <div className={`flex-1 text-base ${isParent ? "font-semibold" : "font-medium"}`}>
@@ -1308,7 +1311,7 @@ export default function ProjectDetailPage() {
                             }}
                             onTouchStart={isChild ? (e) => handleTouchStart(e, item.id) : undefined}
                             onTouchMove={isChild ? handleTouchMove : undefined}
-                            onTouchEnd={isChild ? () => handleTouchEnd(inv.id, item.id) : undefined}
+                            onTouchEnd={isChild ? () => handleTouchEnd('invoice', inv.id, item.id) : undefined}
                           >
                           <div className="flex items-center justify-between mb-2">
                             <div className={`flex-1 text-base ${isParent ? "font-semibold" : "font-medium"}`}>
