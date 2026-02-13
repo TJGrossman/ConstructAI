@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   // Build project context with detailed line items for work entry matching
   const estimatesSummary = project.estimates
     .map((e) => {
-      const itemsList = e.lineItems
+      const itemsList = (e.lineItems || [])
         .filter((item) => !item.parentId) // Only show parent items for brevity
         .map((item) => `  - [${item.id}] ${item.description}`)
         .join("\n");

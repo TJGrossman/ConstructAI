@@ -56,7 +56,7 @@ export function StructuredPreview({
   onReject,
 }: StructuredPreviewProps) {
   const [items, setItems] = useState(initialItems || []);
-  const [workEntries, setWorkEntries] = useState(initialWorkEntries || []);
+  const workEntries = initialWorkEntries || [];
   const [title, setTitle] = useState(initialTitle || "");
   const [notes, setNotes] = useState(initialNotes || "");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
