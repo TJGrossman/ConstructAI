@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import Anthropic from "@anthropic-ai/sdk";
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
+import { gemini } from "@/lib/ai/client";
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,30 +38,21 @@ When returning catalog items, use this JSON format:
 
 Only include catalogItems when you have complete information to update the catalog.`;
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2000,
-      system: systemPrompt,
-      messages: [
-        {
-          role: "user",
-          content: message,
-        },
-      ],
+    const model = gemini.getGenerativeModel({
+      model: "gemini-2.0-flash-exp",
+      systemInstruction: systemPrompt,
     });
 
-    const content = response.content[0];
-    if (content.type !== "text") {
-      throw new Error("Unexpected response type");
-    }
+    const result = await model.generateContent(message);
+    const text = result.response.text();
 
     // Try to parse JSON response
     let parsedResponse;
     try {
-      parsedResponse = JSON.parse(content.text);
+      parsedResponse = JSON.parse(text);
     } catch {
       // If not JSON, return as plain message
-      parsedResponse = { message: content.text };
+      parsedResponse = { message: text };
     }
 
     return NextResponse.json(parsedResponse);

@@ -1,4 +1,4 @@
-import { anthropic } from "./client";
+import { gemini } from "./client";
 import {
   buildProcessingSystemPrompt,
   buildCatalogGenerationPrompt,
@@ -53,23 +53,21 @@ export async function processMessage(
     projectContext
   );
 
-  const messages = [
-    ...conversationHistory.map((msg) => ({
-      role: msg.role as "user" | "assistant",
-      content: msg.content,
-    })),
-    { role: "user" as const, content: userMessage },
-  ];
+  const model = gemini.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-5-20250929",
-    max_tokens: 4096,
-    system: systemPrompt,
-    messages,
+  // Build chat history for Gemini
+  const history = conversationHistory.map((msg) => ({
+    role: msg.role === "assistant" ? "model" : "user",
+    parts: [{ text: msg.content }],
+  }));
+
+  const chat = model.startChat({
+    history,
+    systemInstruction: systemPrompt,
   });
 
-  const text =
-    response.content[0].type === "text" ? response.content[0].text : "";
+  const result = await chat.sendMessage(userMessage);
+  const text = result.response.text();
 
   try {
     return JSON.parse(text) as AIProcessingResult;
@@ -86,14 +84,9 @@ export async function generateCatalog(
 ): Promise<CatalogGenerationResult[]> {
   const prompt = buildCatalogGenerationPrompt(description);
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-5-20250929",
-    max_tokens: 4096,
-    messages: [{ role: "user", content: prompt }],
-  });
-
-  const text =
-    response.content[0].type === "text" ? response.content[0].text : "";
+  const model = gemini.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+  const result = await model.generateContent(prompt);
+  const text = result.response.text();
 
   try {
     return JSON.parse(text) as CatalogGenerationResult[];
