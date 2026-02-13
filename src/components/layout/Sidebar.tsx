@@ -88,8 +88,12 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
         <nav className="flex-1 space-y-1 p-4">
           {navItems.map((item) => {
+            // Dashboard should only be active on exact match
+            // Other routes can match with startsWith
             const isActive =
-              pathname === item.href || pathname.startsWith(item.href + "/");
+              item.href === "/dashboard"
+                ? pathname === "/dashboard"
+                : pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link
                 key={item.href}

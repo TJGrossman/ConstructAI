@@ -28,9 +28,11 @@ export default function OnboardingPage() {
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [voiceEdit, setVoiceEdit] = useState("");
 
   const { isRecording, isSupported, toggleRecording } = useVoiceRecording({
-    onTranscriptChange: setDescription,
+    onTranscriptChange: step === "describe" ? setDescription : setVoiceEdit,
   });
 
   const handleGenerate = async () => {
@@ -65,6 +67,30 @@ export default function OnboardingPage() {
       ...prev,
       { name: "", description: "", category: "other", unit: "hour", defaultRate: 0 },
     ]);
+  };
+
+  const handleVoiceEdit = async () => {
+    if (!voiceEdit.trim()) return;
+    setIsGenerating(true);
+    try {
+      const res = await fetch("/api/ai/catalog", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: voiceEdit,
+          existingItems: items
+        }),
+      });
+      const data = await res.json();
+      if (data.items) {
+        setItems(data.items);
+      }
+      setVoiceEdit("");
+    } catch {
+      // handled
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleSave = async () => {
@@ -151,12 +177,12 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl py-10">
+    <div className="mx-auto max-w-3xl py-10">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Review Your Service Catalog</h1>
           <p className="mt-1 text-muted-foreground">
-            Edit items, adjust rates, or add new services.
+            Use voice to edit, or click items to adjust manually.
           </p>
         </div>
         <button
@@ -167,75 +193,163 @@ export default function OnboardingPage() {
         </button>
       </div>
 
-      <div className="space-y-3">
+      {/* Voice Edit Input */}
+      <div className="relative mb-6">
+        <div className="flex gap-2">
+          <input
+            value={voiceEdit}
+            onChange={(e) => setVoiceEdit(e.target.value)}
+            placeholder="Add or modify services via voice or text (e.g., 'Add drywall repair at $60/hour' or 'Change tile work to $100/hour')"
+            className={`flex-1 rounded-md border bg-background px-4 py-3 text-base placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:text-sm ${
+              isRecording ? "border-destructive ring-2 ring-destructive/50" : "border-input"
+            }`}
+          />
+          {isSupported && (
+            <button
+              onClick={toggleRecording}
+              disabled={isGenerating}
+              className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border text-sm transition-colors ${
+                isRecording
+                  ? "border-destructive bg-destructive text-destructive-foreground"
+                  : "border-input bg-background hover:bg-accent"
+              }`}
+              type="button"
+              aria-label={isRecording ? "Stop recording" : "Start recording"}
+            >
+              {isRecording ? (
+                <MicOff className="h-5 w-5 animate-pulse" />
+              ) : (
+                <Mic className="h-5 w-5" />
+              )}
+            </button>
+          )}
+          <button
+            onClick={handleVoiceEdit}
+            disabled={!voiceEdit.trim() || isGenerating}
+            className="inline-flex shrink-0 items-center gap-2 rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            {isGenerating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
+          </button>
+        </div>
+        {isRecording && (
+          <p className="mt-2 text-sm text-destructive">
+            🎙️ Recording... Speak your changes naturally.
+          </p>
+        )}
+      </div>
+
+      {/* Compact Service List */}
+      <div className="space-y-2">
         {items.map((item, idx) => (
-          <div key={idx} className="rounded-lg border bg-card p-4">
-            <div className="grid gap-3 sm:grid-cols-6">
-              <div className="sm:col-span-2">
-                <label className="text-xs font-medium text-muted-foreground">Name</label>
-                <input
-                  type="text"
-                  value={item.name}
-                  onChange={(e) => updateItem(idx, { name: e.target.value })}
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
+          <div key={idx} className="rounded-lg border bg-card overflow-hidden">
+            {/* Compact View */}
+            {editingIndex !== idx ? (
+              <div
+                className="flex items-center justify-between p-4 cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => setEditingIndex(idx)}
+              >
+                <div className="flex-1">
+                  <div className="flex items-baseline gap-3">
+                    <span className="font-medium">{item.name}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {item.category.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    ${item.defaultRate.toFixed(2)} / {item.unit.replace(/_/g, " ")}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeItem(idx);
+                    }}
+                    className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Category</label>
-                <select
-                  value={item.category}
-                  onChange={(e) => updateItem(idx, { category: e.target.value })}
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c.replace(/_/g, " ")}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Unit</label>
-                <select
-                  value={item.unit}
-                  onChange={(e) => updateItem(idx, { unit: e.target.value })}
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-                >
-                  {UNITS.map((u) => (
-                    <option key={u} value={u}>
-                      {u.replace(/_/g, " ")}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Rate ($)</label>
-                <input
-                  type="number"
-                  value={item.defaultRate}
-                  onChange={(e) => updateItem(idx, { defaultRate: parseFloat(e.target.value) || 0 })}
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-                  step="0.01"
-                />
-              </div>
-              <div className="flex items-end">
+            ) : (
+              /* Expanded Edit View */
+              <div className="p-4 space-y-3 bg-accent/20">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Name</label>
+                    <input
+                      type="text"
+                      value={item.name}
+                      onChange={(e) => updateItem(idx, { name: e.target.value })}
+                      className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Category</label>
+                    <select
+                      value={item.category}
+                      onChange={(e) => updateItem(idx, { category: e.target.value })}
+                      className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm"
+                    >
+                      {CATEGORIES.map((c) => (
+                        <option key={c} value={c}>
+                          {c.replace(/_/g, " ")}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Rate ($)</label>
+                    <input
+                      type="number"
+                      value={item.defaultRate}
+                      onChange={(e) => updateItem(idx, { defaultRate: parseFloat(e.target.value) || 0 })}
+                      className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm"
+                      step="0.01"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Unit</label>
+                    <select
+                      value={item.unit}
+                      onChange={(e) => updateItem(idx, { unit: e.target.value })}
+                      className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm"
+                    >
+                      {UNITS.map((u) => (
+                        <option key={u} value={u}>
+                          {u.replace(/_/g, " ")}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
                 <button
-                  onClick={() => removeItem(idx)}
-                  className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => setEditingIndex(null)}
+                  className="text-sm text-primary hover:underline"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  Done editing
                 </button>
               </div>
-            </div>
+            )}
           </div>
         ))}
       </div>
+
+      {items.length === 0 && (
+        <div className="rounded-lg border-2 border-dashed p-8 text-center text-muted-foreground">
+          <p>No services yet. Use voice or text above to add services.</p>
+        </div>
+      )}
 
       <button
         onClick={addItem}
         className="mt-3 inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium hover:bg-accent"
       >
-        <Plus className="h-4 w-4" /> Add Item
+        <Plus className="h-4 w-4" /> Add Item Manually
       </button>
 
       <div className="mt-8 flex gap-3">
