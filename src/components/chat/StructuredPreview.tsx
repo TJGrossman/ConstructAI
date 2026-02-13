@@ -25,10 +25,22 @@ interface LineItem {
   originalDesc?: string;
 }
 
+interface WorkEntry {
+  estimateLineItemId: string;
+  description: string;
+  actualTimeHours?: number | null;
+  actualTimeRate?: number | null;
+  actualTimeCost?: number | null;
+  actualMaterialsCost?: number | null;
+  actualTotal: number;
+  notes?: string;
+}
+
 interface StructuredPreviewProps {
-  type: "estimate" | "change_order" | "invoice";
+  type: "estimate" | "change_order" | "invoice" | "work_entry";
   title?: string;
-  lineItems: LineItem[];
+  lineItems?: LineItem[];
+  workEntries?: WorkEntry[];
   notes?: string;
   onApprove: (lineItems: LineItem[], title: string, notes: string) => void;
   onReject: () => void;
@@ -38,16 +50,18 @@ export function StructuredPreview({
   type,
   title: initialTitle,
   lineItems: initialItems,
+  workEntries: initialWorkEntries,
   notes: initialNotes,
   onApprove,
   onReject,
 }: StructuredPreviewProps) {
-  const [items, setItems] = useState(initialItems);
+  const [items, setItems] = useState(initialItems || []);
+  const [workEntries, setWorkEntries] = useState(initialWorkEntries || []);
   const [title, setTitle] = useState(initialTitle || "");
   const [notes, setNotes] = useState(initialNotes || "");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<number>>(
-    new Set(initialItems.map((_, idx) => idx).filter((idx) => initialItems[idx].isParent))
+    new Set((initialItems || []).map((_, idx) => idx).filter((idx) => (initialItems || [])[idx].isParent))
   );
 
   // Calculate subtotal (only root-level items to avoid double-counting hierarchy)
@@ -66,6 +80,7 @@ export function StructuredPreview({
     estimate: "Estimate",
     change_order: "Change Order",
     invoice: "Invoice",
+    work_entry: "Work Summary",
   };
 
   const updateItem = (index: number, updates: Partial<LineItem>) => {
@@ -130,8 +145,38 @@ export function StructuredPreview({
         />
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      {type === "work_entry" ? (
+        <div className="p-4 space-y-3">
+          {workEntries.map((entry, idx) => (
+            <div key={idx} className="rounded-lg border bg-muted/30 p-4">
+              <div className="mb-2 font-medium">{entry.description}</div>
+              <div className="grid grid-cols-2 gap-y-2 text-sm">
+                {entry.actualTimeHours && entry.actualTimeRate && (
+                  <>
+                    <div className="text-muted-foreground">Time:</div>
+                    <div className="text-right">{entry.actualTimeHours} hrs @ {formatCurrency(entry.actualTimeRate)}/hr = {formatCurrency(entry.actualTimeCost || 0)}</div>
+                  </>
+                )}
+                {entry.actualMaterialsCost && (
+                  <>
+                    <div className="text-muted-foreground">Materials:</div>
+                    <div className="text-right">{formatCurrency(entry.actualMaterialsCost)}</div>
+                  </>
+                )}
+                <div className="text-muted-foreground font-medium">Total:</div>
+                <div className="text-right font-semibold">{formatCurrency(entry.actualTotal)}</div>
+              </div>
+              {entry.notes && (
+                <div className="mt-2 text-xs text-muted-foreground border-t pt-2">
+                  {entry.notes}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50 text-left">
               {type === "change_order" && (
@@ -313,7 +358,8 @@ export function StructuredPreview({
             </tr>
           </tfoot>
         </table>
-      </div>
+        </div>
+      )}
 
       <div className="p-4">
         <textarea
@@ -326,11 +372,11 @@ export function StructuredPreview({
         <div className="flex gap-2">
           <button
             onClick={() => onApprove(items, title, notes)}
-            disabled={items.length === 0 || !title}
+            disabled={type === "work_entry" ? workEntries.length === 0 : (items.length === 0 || !title)}
             className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             <Check className="h-4 w-4" />
-            Approve & Create
+            {type === "work_entry" ? "Record Work" : "Approve & Create"}
           </button>
           <button
             onClick={onReject}

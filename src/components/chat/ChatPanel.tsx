@@ -40,9 +40,9 @@ export function ChatPanel({
   );
   const [isLoading, setIsLoading] = useState(false);
   const [pendingStructured, setPendingStructured] = useState<{
-    type: "estimate" | "change_order" | "invoice";
+    type: "estimate" | "change_order" | "invoice" | "work_entry";
     title?: string;
-    lineItems: Array<{
+    lineItems?: Array<{
       description: string;
       catalogItemId?: string;
       quantity: number;
@@ -52,6 +52,16 @@ export function ChatPanel({
       category?: string;
       action?: string;
       originalDesc?: string;
+    }>;
+    workEntries?: Array<{
+      estimateLineItemId: string;
+      description: string;
+      actualTimeHours?: number | null;
+      actualTimeRate?: number | null;
+      actualTimeCost?: number | null;
+      actualMaterialsCost?: number | null;
+      actualTotal: number;
+      notes?: string;
     }>;
     notes?: string;
   } | null>(null);
@@ -142,6 +152,12 @@ export function ChatPanel({
       } else if (pendingStructured.type === "invoice") {
         endpoint = "/api/invoices";
         body = { projectId, lineItems, notes };
+      } else if (pendingStructured.type === "work_entry") {
+        endpoint = "/api/work-entries";
+        body = {
+          projectId,
+          workEntries: (pendingStructured as unknown as { workEntries?: unknown[] }).workEntries || []
+        };
       }
 
       const res = await fetch(endpoint, {
@@ -151,10 +167,13 @@ export function ChatPanel({
       });
 
       if (res.ok) {
+        const data = await res.json();
         const confirmMessage: Message = {
           id: Date.now().toString(),
           role: "assistant",
-          content: `${pendingStructured.type === "change_order" ? "Change order" : pendingStructured.type.charAt(0).toUpperCase() + pendingStructured.type.slice(1)} "${title}" has been created successfully.`,
+          content: pendingStructured.type === "work_entry"
+            ? `Work recorded successfully! Added to ${data.status === "draft" ? "draft " : ""}Invoice #${data.number}.`
+            : `${pendingStructured.type === "change_order" ? "Change order" : pendingStructured.type.charAt(0).toUpperCase() + pendingStructured.type.slice(1)} "${title}" has been created successfully.`,
           createdAt: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, confirmMessage]);
@@ -207,6 +226,7 @@ export function ChatPanel({
               type={pendingStructured.type}
               title={pendingStructured.title}
               lineItems={pendingStructured.lineItems}
+              workEntries={pendingStructured.workEntries}
               notes={pendingStructured.notes}
               onApprove={handleApprove}
               onReject={handleReject}

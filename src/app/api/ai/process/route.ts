@@ -40,13 +40,18 @@ export async function POST(req: NextRequest) {
     where: { userId, isActive: true },
   });
 
-  // Build project context
+  // Build project context with detailed line items for work entry matching
   const estimatesSummary = project.estimates
-    .map(
-      (e) =>
-        `Estimate #${e.number} "${e.title}" (${e.status}): $${e.total} - ${e.lineItems.length} items`
-    )
-    .join("\n");
+    .map((e) => {
+      const itemsList = e.lineItems
+        .filter((item) => !item.parentId) // Only show parent items for brevity
+        .map((item) => `  - [${item.id}] ${item.description}`)
+        .join("\n");
+      return `Estimate #${e.number} "${e.title}" (${e.status}): $${e.total}
+Line Items:
+${itemsList || "  None"}`;
+    })
+    .join("\n\n");
 
   const changeOrdersSummary = project.changeOrders
     .map(
@@ -72,7 +77,9 @@ Change Orders:
 ${changeOrdersSummary || "None"}
 
 Invoices:
-${invoicesSummary || "None"}`;
+${invoicesSummary || "None"}
+
+IMPORTANT: When recording work entries, match the work to existing estimate line items by ID shown in [brackets].`;
 
   // Get or create conversation
   let conversation;

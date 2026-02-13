@@ -2,15 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { WorkEntryItem } from "@/lib/ai/processor";
-import { validateWorkEntries } from "@/lib/ai/parsers/workEntry";
 
 export const dynamic = 'force-dynamic';
 
-/**
- * POST /api/work-entries
- * Create work entries from AI-suggested mappings
- */
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -18,135 +12,141 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = (session.user as { id: string }).id;
-  const { receiptId, workEntries } = await req.json();
+  const { projectId, workEntries } = await req.json();
 
-  if (!receiptId || !workEntries?.length) {
+  if (!projectId || !workEntries?.length) {
     return NextResponse.json(
-      { error: "receiptId and workEntries are required" },
+      { error: "projectId and workEntries are required" },
       { status: 400 }
     );
   }
 
-  // Validate work entries
-  const validation = validateWorkEntries(workEntries as WorkEntryItem[]);
-  if (!validation.isValid) {
-    return NextResponse.json(
-      { error: "Validation failed", details: validation.errors },
-      { status: 400 }
-    );
-  }
-
-  // Verify receipt exists and user has access
-  const receipt = await prisma.receipt.findFirst({
-    where: {
-      id: receiptId,
-      project: { userId },
-    },
+  // Verify project ownership
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, userId },
   });
 
-  if (!receipt) {
-    return NextResponse.json({ error: "Receipt not found" }, { status: 404 });
+  if (!project) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  // Create work entries
-  const createdEntries = await Promise.all(
-    (workEntries as WorkEntryItem[]).map((entry) =>
-      prisma.workEntry.create({
+  // Get or create draft invoice for this project
+  let invoice = await prisma.invoice.findFirst({
+    where: { projectId, status: "draft" },
+    include: { lineItems: true },
+  });
+
+  if (!invoice) {
+    // Create new draft invoice
+    const lastInvoice = await prisma.invoice.findFirst({
+      where: { projectId },
+      orderBy: { number: "desc" },
+    });
+
+    invoice = await prisma.invoice.create({
+      data: {
+        projectId,
+        number: (lastInvoice?.number || 0) + 1,
+        status: "draft",
+        subtotal: 0,
+        taxRate: 0,
+        taxAmount: 0,
+        total: 0,
+      },
+      include: { lineItems: true },
+    });
+  }
+
+  // Add work entries to invoice
+  for (const entry of workEntries) {
+    const estimateLineItem = await prisma.estimateLineItem.findUnique({
+      where: { id: entry.estimateLineItemId },
+    });
+
+    if (!estimateLineItem) {
+      continue; // Skip if estimate line item not found
+    }
+
+    // Check if this line item already has an invoice entry
+    const existingInvoiceItem = invoice.lineItems.find(
+      (item) => item.estimateLineItemId === entry.estimateLineItemId
+    );
+
+    if (existingInvoiceItem) {
+      // Update existing invoice line item
+      await prisma.invoiceLineItem.update({
+        where: { id: existingInvoiceItem.id },
         data: {
-          receiptId,
-          estimateLineItemId: entry.estimateLineItemId,
-          actualTimeHours: entry.actualTimeHours ?? null,
-          actualTimeRate: entry.actualTimeRate ?? null,
-          actualTimeCost: entry.actualTimeCost ?? null,
-          actualMaterialsCost: entry.actualMaterialsCost ?? null,
-          actualTotal: entry.actualTotal,
+          timeHours: entry.actualTimeHours ? Number(entry.actualTimeHours) : null,
+          timeRate: entry.actualTimeRate ? Number(entry.actualTimeRate) : null,
+          timeCost: entry.actualTimeCost ? Number(entry.actualTimeCost) : null,
+          materialsCost: entry.actualMaterialsCost ? Number(entry.actualMaterialsCost) : null,
+          total: Number(entry.actualTotal),
           notes: entry.notes || null,
-          status: "pending",
         },
-        include: {
-          estimateLineItem: {
-            select: {
-              id: true,
-              description: true,
-              estimateId: true,
-            },
-          },
+      });
+    } else {
+      // Create new invoice line item
+      await prisma.invoiceLineItem.create({
+        data: {
+          invoiceId: invoice.id,
+          estimateLineItemId: entry.estimateLineItemId,
+          description: entry.description || estimateLineItem.description,
+          category: estimateLineItem.category,
+          parentId: estimateLineItem.parentId,
+          timeHours: entry.actualTimeHours ? Number(entry.actualTimeHours) : null,
+          timeRate: entry.actualTimeRate ? Number(entry.actualTimeRate) : null,
+          timeCost: entry.actualTimeCost ? Number(entry.actualTimeCost) : null,
+          materialsCost: entry.actualMaterialsCost ? Number(entry.actualMaterialsCost) : null,
+          total: Number(entry.actualTotal),
+          notes: entry.notes || null,
+          sortOrder: invoice.lineItems.length,
         },
-      })
-    )
-  );
+      });
+    }
+  }
+
+  // Recalculate invoice totals
+  const allLineItems = await prisma.invoiceLineItem.findMany({
+    where: { invoiceId: invoice.id },
+  });
+
+  const subtotal = allLineItems.reduce((sum, item) => sum + Number(item.total), 0);
+
+  // Get user's tax rate
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const taxRate = Number(user?.defaultTaxRate || 0);
+  const taxAmount = subtotal * taxRate;
+  const total = subtotal + taxAmount;
+
+  // Update invoice totals
+  await prisma.invoice.update({
+    where: { id: invoice.id },
+    data: {
+      subtotal,
+      taxRate,
+      taxAmount,
+      total,
+    },
+  });
 
   // Audit log
   await prisma.auditLog.create({
     data: {
-      projectId: receipt.projectId,
+      projectId,
       userId,
-      action: "work_entries_created",
-      entityType: "work_entry",
-      entityId: receiptId,
-      details: { count: createdEntries.length },
+      action: "work_entry_created",
+      entityType: "invoice",
+      entityId: invoice.id,
+      details: { workEntries },
     },
   });
 
-  return NextResponse.json({ workEntries: createdEntries }, { status: 201 });
-}
-
-/**
- * GET /api/work-entries?estimateId=xxx
- * List work entries for an estimate
- */
-export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = (session.user as { id: string }).id;
-  const { searchParams } = new URL(req.url);
-  const estimateId = searchParams.get("estimateId");
-  const status = searchParams.get("status");
-
-  if (!estimateId) {
-    return NextResponse.json(
-      { error: "estimateId is required" },
-      { status: 400 }
-    );
-  }
-
-  // Verify estimate access
-  const estimate = await prisma.estimate.findFirst({
-    where: {
-      id: estimateId,
-      project: { userId },
-    },
+  // Fetch updated invoice
+  const updatedInvoice = await prisma.invoice.findUnique({
+    where: { id: invoice.id },
+    include: { lineItems: true },
   });
 
-  if (!estimate) {
-    return NextResponse.json({ error: "Estimate not found" }, { status: 404 });
-  }
-
-  // Get work entries
-  const workEntries = await prisma.workEntry.findMany({
-    where: {
-      estimateLineItem: {
-        estimateId,
-      },
-      ...(status ? { status } : {}),
-    },
-    include: {
-      receipt: true,
-      estimateLineItem: {
-        select: {
-          id: true,
-          description: true,
-          timeCost: true,
-          materialsCost: true,
-          total: true,
-        },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return NextResponse.json({ workEntries }, { status: 200 });
+  return NextResponse.json(updatedInvoice, { status: 201 });
 }
