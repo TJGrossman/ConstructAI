@@ -3,8 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Pencil, Trash2 } from "lucide-react";
 import { ChatPanel } from "@/components/chat/ChatPanel";
+import { StructuredPreview } from "@/components/chat/StructuredPreview";
+import { LineItem as ProcessorLineItem } from "@/lib/ai/processor";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 interface LineItem {
@@ -94,6 +96,8 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("chat");
+  const [editingEstimate, setEditingEstimate] = useState<Estimate | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const fetchProject = useCallback(async () => {
     try {
@@ -122,6 +126,38 @@ export default function ProjectDetailPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+    fetchProject();
+  };
+
+  const handleEditSave = async (
+    lineItems: ProcessorLineItem[],
+    title: string,
+    notes: string
+  ) => {
+    if (!editingEstimate) return;
+
+    await fetch(`/api/estimates/${editingEstimate.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, lineItems, notes }),
+    });
+
+    setEditingEstimate(null);
+    fetchProject();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (deleteConfirm !== id) {
+      setDeleteConfirm(id);
+      setTimeout(() => setDeleteConfirm(null), 3000);
+      return;
+    }
+
+    await fetch(`/api/estimates/${id}`, {
+      method: "DELETE",
+    });
+
+    setDeleteConfirm(null);
     fetchProject();
   };
 
@@ -227,6 +263,24 @@ export default function ProjectDetailPage() {
                       <span className={`rounded px-2 py-0.5 text-xs font-medium ${statusColors[est.status] || ""}`}>
                         {est.status}
                       </span>
+                      <button
+                        onClick={() => setEditingEstimate(est)}
+                        className="rounded border px-2 py-1 text-xs hover:bg-accent"
+                        title="Edit estimate"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(est.id)}
+                        className={`rounded px-2 py-1 text-xs ${
+                          deleteConfirm === est.id
+                            ? "bg-red-600 text-white"
+                            : "border hover:bg-accent"
+                        }`}
+                        title={deleteConfirm === est.id ? "Click again to confirm" : "Delete estimate"}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
                       {est.status === "draft" && (
                         <button
                           onClick={() => updateStatus("estimates", est.id, "sent")}
@@ -568,6 +622,38 @@ export default function ProjectDetailPage() {
           <HistoryTab projectId={projectId} />
         )}
       </div>
+
+      {/* Edit Modal */}
+      {editingEstimate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg bg-background shadow-xl">
+            <div className="border-b p-4">
+              <h2 className="text-lg font-semibold">Edit Estimate #{editingEstimate.number}</h2>
+            </div>
+            <div className="p-4">
+              <StructuredPreview
+                type="estimate"
+                title={editingEstimate.title}
+                lineItems={editingEstimate.lineItems.map((item) => ({
+                  description: item.description,
+                  catalogItemId: item.category || undefined,
+                  category: item.category || undefined,
+                  parentId: item.parentId || undefined,
+                  timeHours: item.timeHours ? Number(item.timeHours) : null,
+                  timeRate: item.timeRate ? Number(item.timeRate) : null,
+                  timeCost: item.timeCost ? Number(item.timeCost) : null,
+                  materialsCost: item.materialsCost ? Number(item.materialsCost) : null,
+                  total: Number(item.total),
+                  notes: undefined,
+                }))}
+                notes=""
+                onApprove={handleEditSave}
+                onReject={() => setEditingEstimate(null)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

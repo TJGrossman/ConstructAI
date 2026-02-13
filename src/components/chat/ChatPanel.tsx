@@ -79,6 +79,7 @@ export function ChatPanel({
           projectId,
           message: content,
           conversationId: conversationId || undefined,
+          pendingDraft: pendingStructured || undefined,
         }),
       });
 
@@ -96,8 +97,19 @@ export function ChatPanel({
       };
       setMessages((prev) => [...prev, assistantMessage]);
 
+      // Handle structured data based on intent
       if (data.structured) {
-        setPendingStructured(data.structured);
+        if (data.intent === "modify_draft" && pendingStructured) {
+          // Update the existing pending structured data
+          setPendingStructured({
+            ...pendingStructured,
+            ...data.structured,
+            lineItems: data.structured.lineItems || pendingStructured.lineItems,
+          });
+        } else if (data.intent === "new_estimate" || data.intent === "change_order" || data.intent === "invoice_entry") {
+          // Create new pending structured data
+          setPendingStructured(data.structured);
+        }
       }
     } catch {
       const errorMessage: Message = {

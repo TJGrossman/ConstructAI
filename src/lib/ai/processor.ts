@@ -41,6 +41,7 @@ export interface WorkEntryItem {
 export interface AIProcessingResult {
   intent:
     | "new_estimate"
+    | "modify_draft"
     | "change_order"
     | "invoice_entry"
     | "work_entry"
