@@ -92,11 +92,16 @@ export async function processMessage(
     max_tokens: 4096,
   });
 
-  const text = response.choices[0]?.message?.content || "";
+  let text = response.choices[0]?.message?.content || "";
+
+  // Strip markdown code fences if present
+  text = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
 
   try {
     return JSON.parse(text) as AIProcessingResult;
-  } catch {
+  } catch (error) {
+    console.error("Failed to parse AI response:", error);
+    console.error("Raw response:", text);
     return {
       intent: "general",
       message: text,
