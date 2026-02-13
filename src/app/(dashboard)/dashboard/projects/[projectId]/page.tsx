@@ -95,6 +95,17 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("chat");
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
+  const [swipeState, setSwipeState] = useState<{
+    itemId: string | null;
+    startX: number;
+    currentX: number;
+    isDragging: boolean;
+  }>({
+    itemId: null,
+    startX: 0,
+    currentX: 0,
+    isDragging: false,
+  });
 
   const fetchProject = useCallback(async () => {
     try {
@@ -161,6 +172,83 @@ export default function ProjectDetailPage() {
     }, 0);
 
     return childrenTotal.toFixed(2);
+  };
+
+  // Swipe handlers for mobile delete
+  const handleTouchStart = (e: React.TouchEvent, itemId: string) => {
+    setSwipeState({
+      itemId,
+      startX: e.touches[0].clientX,
+      currentX: e.touches[0].clientX,
+      isDragging: true,
+    });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!swipeState.isDragging) return;
+    setSwipeState((prev) => ({
+      ...prev,
+      currentX: e.touches[0].clientX,
+    }));
+  };
+
+  const handleTouchEnd = async (estimateId: string, itemId: string, estimate: Estimate) => {
+    if (!swipeState.isDragging) return;
+
+    const swipeDistance = swipeState.startX - swipeState.currentX;
+    const screenWidth = window.innerWidth;
+    const swipePercentage = swipeDistance / screenWidth;
+
+    // Delete if swiped more than 70%
+    if (swipePercentage > 0.7) {
+      // Keep swipe state briefly to show animation
+      setTimeout(() => {
+        setSwipeState({
+          itemId: null,
+          startX: 0,
+          currentX: 0,
+          isDragging: false,
+        });
+      }, 300);
+      // Optimistically remove from UI
+      const updatedLineItems = estimate.lineItems.filter((item) => item.id !== itemId);
+
+      // Call API to update estimate
+      try {
+        await fetch(`/api/estimates/${estimateId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            lineItems: updatedLineItems.map((item) => ({
+              description: item.description,
+              catalogItemId: item.category || undefined,
+              category: item.category || undefined,
+              parentId: item.parentId || undefined,
+              timeHours: item.timeHours ? Number(item.timeHours) : null,
+              timeRate: item.timeRate ? Number(item.timeRate) : null,
+              timeCost: item.timeCost ? Number(item.timeCost) : null,
+              materialsCost: item.materialsCost ? Number(item.materialsCost) : null,
+              total: Number(item.total),
+            })),
+          }),
+        });
+
+        // Refresh project data
+        fetchProject();
+      } catch (error) {
+        console.error("Failed to delete item:", error);
+        // Refresh to revert optimistic update
+        fetchProject();
+      }
+    } else {
+      // Swipe not far enough, snap back
+      setSwipeState({
+        itemId: null,
+        startX: 0,
+        currentX: 0,
+        isDragging: false,
+      });
+    }
   };
 
   const updateStatus = async (
@@ -383,11 +471,32 @@ export default function ProjectDetailPage() {
                         return null;
                       }
 
+                      // Calculate swipe offset
+                      const swipeOffset =
+                        swipeState.isDragging && swipeState.itemId === item.id
+                          ? Math.max(0, swipeState.startX - swipeState.currentX)
+                          : 0;
+                      const swipePercentage = swipeOffset / window.innerWidth;
+
                       return (
-                        <div
-                          key={item.id}
-                          className={`border-b p-4 last:border-b-0 ${isParent ? "bg-muted/30" : ""} ${isChild ? "pl-8" : ""}`}
-                        >
+                        <div key={item.id} className="relative overflow-hidden">
+                          {/* Delete button background (shows when swiping) */}
+                          {isChild && swipePercentage > 0.2 && (
+                            <div className="absolute inset-0 flex items-center justify-end bg-red-600 px-6">
+                              <span className="text-white font-medium">Delete</span>
+                            </div>
+                          )}
+
+                          {/* Main card content */}
+                          <div
+                            className={`border-b p-4 last:border-b-0 ${isParent ? "bg-muted/30" : "bg-background"} ${isChild ? "pl-8" : ""} transition-transform`}
+                            style={{
+                              transform: isChild ? `translateX(-${swipeOffset}px)` : undefined,
+                            }}
+                            onTouchStart={isChild ? (e) => handleTouchStart(e, item.id) : undefined}
+                            onTouchMove={isChild ? handleTouchMove : undefined}
+                            onTouchEnd={isChild ? () => handleTouchEnd(est.id, item.id, est) : undefined}
+                          >
                           <div className={`mb-2 text-base ${isParent ? "font-semibold" : "font-medium"}`}>
                             <div className="flex items-center gap-2">
                               {isParent && (
