@@ -43,10 +43,18 @@ export async function POST(req: NextRequest) {
   // Build project context with detailed line items for work entry matching
   const estimatesSummary = project.estimates
     .map((e) => {
-      const itemsList = (e.lineItems || [])
-        .filter((item) => !item.parentId) // Only show parent items for brevity
-        .map((item) => `  - [${item.id}] ${item.description}`)
-        .join("\n");
+      // Show all items in hierarchy so AI can match work to specific child items
+      const parents = (e.lineItems || []).filter((item) => !item.parentId);
+      const itemsList = parents.map((parent) => {
+        const children = (e.lineItems || []).filter((item) => item.parentId === parent.id);
+        if (children.length > 0) {
+          const childrenStr = children
+            .map((child) => `    - [${child.id}] ${child.description}`)
+            .join("\n");
+          return `  - [${parent.id}] ${parent.description}\n${childrenStr}`;
+        }
+        return `  - [${parent.id}] ${parent.description}`;
+      }).join("\n");
       return `Estimate #${e.number} "${e.title}" (${e.status}): $${e.total}
 Line Items:
 ${itemsList || "  None"}`;
