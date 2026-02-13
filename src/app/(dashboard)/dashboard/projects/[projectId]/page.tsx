@@ -173,7 +173,7 @@ export default function ProjectDetailPage() {
         next.add(parentId);
       }
       // Save to localStorage
-      localStorage.setItem(`expandedParents_${projectId}`, JSON.stringify([...next]));
+      localStorage.setItem(`expandedParents_${projectId}`, JSON.stringify(Array.from(next)));
       return next;
     });
   };
@@ -232,7 +232,7 @@ export default function ProjectDetailPage() {
 
       // Save scroll position and expanded state to localStorage
       localStorage.setItem(`scrollPos_${projectId}`, window.scrollY.toString());
-      localStorage.setItem(`expandedParents_${projectId}`, JSON.stringify([...expandedParents]));
+      localStorage.setItem(`expandedParents_${projectId}`, JSON.stringify(Array.from(expandedParents)));
 
       // Wait for animation to complete
       await new Promise(resolve => setTimeout(resolve, 300));
