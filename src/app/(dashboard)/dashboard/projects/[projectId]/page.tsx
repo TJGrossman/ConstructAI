@@ -108,7 +108,7 @@ export default function ProjectDetailPage() {
     isDragging: false,
   });
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
-  const [editingEstimateId, setEditingEstimateId] = useState<string | null>(null);
+  const [editingDocument, setEditingDocument] = useState<{ type: 'estimate' | 'invoice', id: string } | null>(null);
   const [editedLineItems, setEditedLineItems] = useState<LineItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -278,13 +278,13 @@ export default function ProjectDetailPage() {
     fetchProject();
   };
 
-  const enterEditMode = (estimate: Estimate) => {
-    setEditingEstimateId(estimate.id);
-    setEditedLineItems(JSON.parse(JSON.stringify(estimate.lineItems))); // Deep copy
+  const enterEditMode = (document: Estimate | Invoice, type: 'estimate' | 'invoice') => {
+    setEditingDocument({ type, id: document.id });
+    setEditedLineItems(JSON.parse(JSON.stringify(document.lineItems))); // Deep copy
   };
 
   const cancelEdit = () => {
-    setEditingEstimateId(null);
+    setEditingDocument(null);
     setEditedLineItems([]);
   };
 
@@ -315,23 +315,25 @@ export default function ProjectDetailPage() {
     setEditedLineItems((prev) => prev.filter((item) => item.id !== itemId));
   };
 
-  const deleteEstimate = async (estimateId: string) => {
-    if (!confirm("Are you sure you want to delete this estimate? This action cannot be undone.")) {
+  const deleteDocument = async (type: 'estimate' | 'invoice', documentId: string) => {
+    const typeName = type === 'estimate' ? 'estimate' : 'invoice';
+    if (!confirm(`Are you sure you want to delete this ${typeName}? This action cannot be undone.`)) {
       return;
     }
 
     try {
-      await fetch(`/api/estimates/${estimateId}`, {
+      const endpoint = type === 'estimate' ? `/api/estimates/${documentId}` : `/api/invoices/${documentId}`;
+      await fetch(endpoint, {
         method: "DELETE",
       });
       fetchProject();
     } catch (error) {
-      console.error("Failed to delete estimate:", error);
-      alert("Failed to delete estimate. Please try again.");
+      console.error(`Failed to delete ${typeName}:`, error);
+      alert(`Failed to delete ${typeName}. Please try again.`);
     }
   };
 
-  const saveEstimate = async (estimateId: string) => {
+  const saveDocument = async (type: 'estimate' | 'invoice', documentId: string) => {
     setIsSaving(true);
     try {
       // Sort items: parents first, then their children in order
@@ -359,7 +361,8 @@ export default function ProjectDetailPage() {
         };
       });
 
-      await fetch(`/api/estimates/${estimateId}`, {
+      const endpoint = type === 'estimate' ? `/api/estimates/${documentId}` : `/api/invoices/${documentId}`;
+      await fetch(endpoint, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -378,11 +381,11 @@ export default function ProjectDetailPage() {
         }),
       });
 
-      setEditingEstimateId(null);
+      setEditingDocument(null);
       setEditedLineItems([]);
       fetchProject();
     } catch (error) {
-      console.error("Failed to save estimate:", error);
+      console.error(`Failed to save ${type}:`, error);
     } finally {
       setIsSaving(false);
     }
@@ -481,7 +484,7 @@ export default function ProjectDetailPage() {
               </div>
             ) : (
               project.estimates.map((est) => {
-                const isEditing = editingEstimateId === est.id;
+                const isEditing = editingDocument?.type === 'estimate' && editingDocument?.id === est.id;
                 const displayItems = isEditing ? editedLineItems : est.lineItems;
 
                 return (
@@ -499,7 +502,7 @@ export default function ProjectDetailPage() {
                       {isEditing ? (
                         <>
                           <button
-                            onClick={() => saveEstimate(est.id)}
+                            onClick={() => saveDocument('estimate', est.id)}
                             disabled={isSaving}
                             className="flex items-center gap-1 rounded bg-green-600 px-3 py-1.5 text-xs text-white hover:bg-green-700 disabled:opacity-50"
                           >
@@ -521,7 +524,7 @@ export default function ProjectDetailPage() {
                             {est.status}
                           </span>
                           <button
-                            onClick={() => enterEditMode(est)}
+                            onClick={() => enterEditMode(est, 'estimate')}
                             className="flex items-center gap-1 rounded border px-2 py-1 text-xs hover:bg-accent"
                             title="Edit estimate"
                           >
@@ -529,7 +532,7 @@ export default function ProjectDetailPage() {
                             <span className="hidden sm:inline">Edit</span>
                           </button>
                           <button
-                            onClick={() => deleteEstimate(est.id)}
+                            onClick={() => deleteDocument('estimate', est.id)}
                             className="flex items-center gap-1 rounded border border-red-600 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
                             title="Delete estimate"
                           >
@@ -1034,7 +1037,11 @@ export default function ProjectDetailPage() {
                 No invoices yet. Use the chat to create one.
               </div>
             ) : (
-              project.invoices.map((inv) => (
+              project.invoices.map((inv) => {
+                const isEditing = editingDocument?.type === 'invoice' && editingDocument?.id === inv.id;
+                const displayItems = isEditing ? editedLineItems : inv.lineItems;
+
+                return (
                 <div key={inv.id} className="rounded-lg border bg-card">
                   <div className="flex items-center justify-between border-b p-4">
                     <div>
@@ -1045,24 +1052,63 @@ export default function ProjectDetailPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`rounded px-2 py-0.5 text-xs font-medium ${statusColors[inv.status] || ""}`}>
-                        {inv.status}
-                      </span>
-                      {inv.status === "draft" && (
-                        <button
-                          onClick={() => updateStatus("invoices", inv.id, "sent")}
-                          className="rounded border px-2 py-1 text-xs hover:bg-accent"
-                        >
-                          Mark Sent
-                        </button>
-                      )}
-                      {inv.status === "sent" && (
-                        <button
-                          onClick={() => updateStatus("invoices", inv.id, "paid")}
-                          className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700"
-                        >
-                          Mark Paid
-                        </button>
+                      {isEditing ? (
+                        <>
+                          <button
+                            onClick={() => saveDocument('invoice', inv.id)}
+                            disabled={isSaving}
+                            className="flex items-center gap-1 rounded bg-green-600 px-3 py-1.5 text-xs text-white hover:bg-green-700 disabled:opacity-50"
+                          >
+                            <Save className="h-3 w-3" />
+                            {isSaving ? "Saving..." : "Save"}
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            disabled={isSaving}
+                            className="flex items-center gap-1 rounded border px-3 py-1.5 text-xs hover:bg-accent disabled:opacity-50"
+                          >
+                            <X className="h-3 w-3" />
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className={`rounded px-2 py-0.5 text-xs font-medium ${statusColors[inv.status] || ""}`}>
+                            {inv.status}
+                          </span>
+                          {inv.status === "draft" && (
+                            <button
+                              onClick={() => updateStatus("invoices", inv.id, "sent")}
+                              className="rounded border px-2 py-1 text-xs hover:bg-accent"
+                            >
+                              Mark Sent
+                            </button>
+                          )}
+                          {inv.status === "sent" && (
+                            <button
+                              onClick={() => updateStatus("invoices", inv.id, "paid")}
+                              className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700"
+                            >
+                              Mark Paid
+                            </button>
+                          )}
+                          <button
+                            onClick={() => enterEditMode(inv, 'invoice')}
+                            className="flex items-center gap-1 rounded border px-2 py-1 text-xs hover:bg-accent"
+                            title="Edit invoice"
+                          >
+                            <Pencil className="h-3 w-3" />
+                            <span className="hidden sm:inline">Edit</span>
+                          </button>
+                          <button
+                            onClick={() => deleteDocument('invoice', inv.id)}
+                            className="flex items-center gap-1 rounded border border-red-600 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                            title="Delete invoice"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            <span className="hidden sm:inline">Delete</span>
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -1074,78 +1120,311 @@ export default function ProjectDetailPage() {
                         <th className="px-4 py-2 font-medium">Time</th>
                         <th className="px-4 py-2 font-medium">Materials</th>
                         <th className="px-4 py-2 text-right font-medium">Total</th>
+                        {isEditing && <th className="px-4 py-2 w-20"></th>}
                       </tr>
                     </thead>
                     <tbody>
-                      {inv.lineItems.map((item) => {
+                      {displayItems.map((item) => {
                         const isParent = !item.parentId;
                         const isChild = !!item.parentId;
+                        const isExpanded = expandedParents.has(item.id);
+
+                        // Hide child items if their parent is collapsed
+                        if (isChild && !expandedParents.has(item.parentId || "")) {
+                          return null;
+                        }
+
                         return (
                           <tr
                             key={item.id}
                             className={`border-b ${isParent ? "bg-muted/30 font-semibold" : ""}`}
                           >
                             <td className={`px-4 py-2 ${isChild ? "pl-8" : ""}`}>
-                              {item.description}
+                              <div className="flex items-center gap-2">
+                                {isParent && (
+                                  <button
+                                    onClick={() => toggleParent(item.id)}
+                                    className="text-muted-foreground hover:text-foreground"
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                )}
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={item.description}
+                                    onChange={(e) => updateLineItem(item.id, "description", e.target.value)}
+                                    className="flex-1 rounded border bg-background px-2 py-1 text-sm"
+                                    placeholder="Description"
+                                  />
+                                ) : (
+                                  <span>{item.description}</span>
+                                )}
+                                {isEditing && isParent && (
+                                  <button
+                                    onClick={() => addLineItem(item.id)}
+                                    className="text-muted-foreground hover:text-foreground"
+                                    title="Add child item"
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </div>
                             </td>
                             <td className="px-4 py-2 text-sm text-muted-foreground">
-                              {item.timeHours && item.timeRate ? (
-                                <span>{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</span>
+                              {isEditing && !isParent ? (
+                                <div className="flex gap-1">
+                                  <input
+                                    type="number"
+                                    value={item.timeHours || ""}
+                                    onChange={(e) => updateLineItem(item.id, "timeHours", e.target.value)}
+                                    className="w-16 rounded border bg-background px-2 py-1 text-sm"
+                                    placeholder="Hrs"
+                                    step="0.5"
+                                  />
+                                  <input
+                                    type="number"
+                                    value={item.timeRate || ""}
+                                    onChange={(e) => updateLineItem(item.id, "timeRate", e.target.value)}
+                                    className="w-20 rounded border bg-background px-2 py-1 text-sm"
+                                    placeholder="Rate"
+                                    step="1"
+                                  />
+                                </div>
                               ) : (
-                                <span className="text-muted-foreground/50">—</span>
+                                item.timeHours && item.timeRate ? (
+                                  <span>{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</span>
+                                ) : (
+                                  <span className="text-muted-foreground/50">—</span>
+                                )
                               )}
                             </td>
                             <td className="px-4 py-2 text-sm text-muted-foreground">
-                              {item.materialsCost ? (
-                                formatCurrency(item.materialsCost)
+                              {isEditing && !isParent ? (
+                                <input
+                                  type="number"
+                                  value={item.materialsCost || ""}
+                                  onChange={(e) => updateLineItem(item.id, "materialsCost", e.target.value)}
+                                  className="w-24 rounded border bg-background px-2 py-1 text-sm"
+                                  placeholder="Cost"
+                                  step="0.01"
+                                />
                               ) : (
-                                <span className="text-muted-foreground/50">—</span>
+                                item.materialsCost ? (
+                                  formatCurrency(item.materialsCost)
+                                ) : (
+                                  <span className="text-muted-foreground/50">—</span>
+                                )
                               )}
                             </td>
-                            <td className="px-4 py-2 text-right font-medium">{formatCurrency(item.total)}</td>
+                            <td className="px-4 py-2 text-right font-medium">
+                              {formatCurrency(getItemTotal(item, displayItems))}
+                            </td>
+                            {isEditing && (
+                              <td className="px-4 py-2">
+                                <button
+                                  onClick={() => removeLineItem(item.id)}
+                                  className="text-red-600 hover:text-red-700"
+                                  title="Delete item"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </td>
+                            )}
                           </tr>
                         );
                       })}
                     </tbody>
                     <tfoot>
+                      {isEditing && (
+                        <tr>
+                          <td colSpan={isEditing ? 5 : 4} className="px-4 py-3">
+                            <button
+                              onClick={() => addLineItem(null)}
+                              className="flex items-center gap-2 text-sm text-primary hover:underline"
+                            >
+                              <Plus className="h-4 w-4" />
+                              Add Section
+                            </button>
+                          </td>
+                        </tr>
+                      )}
                       <tr className="font-medium">
                         <td colSpan={3} className="px-4 py-3 text-right">Total</td>
                         <td className="px-4 py-3 text-right">{formatCurrency(inv.total)}</td>
+                        {isEditing && <td></td>}
                       </tr>
                     </tfoot>
                   </table>
                   {/* Mobile card view */}
                   <div className="lg:hidden">
-                    {inv.lineItems.map((item) => {
+                    {displayItems.map((item) => {
                       const isParent = !item.parentId;
                       const isChild = !!item.parentId;
+                      const isExpanded = expandedParents.has(item.id);
+
+                      // Hide child items if their parent is collapsed
+                      if (isChild && !expandedParents.has(item.parentId || "")) {
+                        return null;
+                      }
+
+                      // Calculate swipe offset
+                      const isDeleting = deletingItemId === item.id;
+                      const swipeOffset = isDeleting
+                        ? window.innerWidth
+                        : swipeState.isDragging && swipeState.itemId === item.id
+                          ? Math.max(0, swipeState.startX - swipeState.currentX)
+                          : 0;
+                      const swipePercentage = swipeOffset / window.innerWidth;
+
                       return (
-                        <div
-                          key={item.id}
-                          className={`border-b p-4 last:border-b-0 ${isParent ? "bg-muted/30" : ""} ${isChild ? "pl-8" : ""}`}
-                        >
-                          <div className={`mb-2 text-base ${isParent ? "font-semibold" : "font-medium"}`}>
-                            {item.description}
+                        <div key={item.id} className="relative overflow-hidden">
+                          {/* Delete button background (always rendered, controlled by opacity) */}
+                          {isChild && (
+                            <div
+                              className="absolute inset-0 flex items-center justify-end bg-red-600 px-6 transition-opacity"
+                              style={{
+                                opacity: swipePercentage > 0.15 ? 1 : 0,
+                              }}
+                            >
+                              <span className="text-white font-medium">Delete</span>
+                            </div>
+                          )}
+
+                          {/* Main card content */}
+                          <div
+                            className={`border-b p-4 last:border-b-0 ${isParent ? "bg-muted/30" : "bg-background"} ${isChild ? "pl-8" : ""}`}
+                            style={{
+                              transform: isChild ? `translateX(-${swipeOffset}px)` : undefined,
+                              transition: swipeState.isDragging
+                                ? 'none'
+                                : isDeleting
+                                  ? 'transform 0.3s ease-in-out'
+                                  : 'transform 0.2s ease-out',
+                            }}
+                            onTouchStart={isChild ? (e) => handleTouchStart(e, item.id) : undefined}
+                            onTouchMove={isChild ? handleTouchMove : undefined}
+                            onTouchEnd={isChild ? () => handleTouchEnd(inv.id, item.id) : undefined}
+                          >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className={`flex-1 text-base ${isParent ? "font-semibold" : "font-medium"}`}>
+                              <div className="flex items-center gap-2">
+                                {isParent && (
+                                  <button
+                                    onClick={() => toggleParent(item.id)}
+                                    className="text-muted-foreground hover:text-foreground"
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                )}
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={item.description}
+                                    onChange={(e) => updateLineItem(item.id, "description", e.target.value)}
+                                    className="flex-1 rounded border bg-background px-2 py-1 text-sm"
+                                    placeholder="Description"
+                                  />
+                                ) : (
+                                  <span>{item.description}</span>
+                                )}
+                              </div>
+                            </div>
+                            {isEditing && (
+                              <div className="flex items-center gap-2">
+                                {isParent && (
+                                  <button
+                                    onClick={() => addLineItem(item.id)}
+                                    className="text-primary hover:text-primary/80"
+                                    title="Add child item"
+                                  >
+                                    <Plus className="h-5 w-5" />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => removeLineItem(item.id)}
+                                  className="text-red-600 hover:text-red-700"
+                                  title="Delete item"
+                                >
+                                  <Trash2 className="h-5 w-5" />
+                                </button>
+                              </div>
+                            )}
                           </div>
                           <div className="grid grid-cols-2 gap-y-1.5 text-sm">
-                            {item.timeHours && item.timeRate && (
+                            {(isEditing || (item.timeHours && item.timeRate)) && !isParent && (
                               <>
                                 <div className="text-muted-foreground">Time:</div>
-                                <div className="text-right">{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</div>
+                                {isEditing ? (
+                                  <div className="flex gap-1 justify-end">
+                                    <input
+                                      type="number"
+                                      value={item.timeHours || ""}
+                                      onChange={(e) => updateLineItem(item.id, "timeHours", e.target.value)}
+                                      className="w-16 rounded border bg-background px-2 py-1 text-sm text-right"
+                                      placeholder="Hrs"
+                                      step="0.5"
+                                    />
+                                    <span className="self-center text-xs">@</span>
+                                    <input
+                                      type="number"
+                                      value={item.timeRate || ""}
+                                      onChange={(e) => updateLineItem(item.id, "timeRate", e.target.value)}
+                                      className="w-20 rounded border bg-background px-2 py-1 text-sm text-right"
+                                      placeholder="Rate"
+                                      step="1"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="text-right">{item.timeHours} hrs @ {formatCurrency(item.timeRate || 0)}/hr</div>
+                                )}
                               </>
                             )}
-                            {item.materialsCost && (
+                            {(isEditing || item.materialsCost) && !isParent && (
                               <>
                                 <div className="text-muted-foreground">Materials:</div>
-                                <div className="text-right">{formatCurrency(item.materialsCost)}</div>
+                                {isEditing ? (
+                                  <input
+                                    type="number"
+                                    value={item.materialsCost || ""}
+                                    onChange={(e) => updateLineItem(item.id, "materialsCost", e.target.value)}
+                                    className="rounded border bg-background px-2 py-1 text-sm text-right"
+                                    placeholder="Cost"
+                                    step="0.01"
+                                  />
+                                ) : (
+                                  <div className="text-right">{formatCurrency(item.materialsCost || 0)}</div>
+                                )}
                               </>
                             )}
                             <div className="text-muted-foreground">Total:</div>
-                            <div className="text-right font-semibold">{formatCurrency(item.total)}</div>
+                            <div className="text-right font-semibold">
+                              {formatCurrency(getItemTotal(item, displayItems))}
+                            </div>
+                          </div>
                           </div>
                         </div>
                       );
                     })}
+                    {isEditing && (
+                      <div className="border-b p-4">
+                        <button
+                          onClick={() => addLineItem(null)}
+                          className="flex items-center gap-2 text-sm text-primary hover:underline"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Section
+                        </button>
+                      </div>
+                    )}
                     <div className="border-t bg-muted/30 p-4">
                       <div className="flex justify-between font-semibold text-base">
                         <span>Total</span>
