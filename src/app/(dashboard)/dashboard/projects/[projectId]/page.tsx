@@ -720,34 +720,99 @@ export default function ProjectDetailPage() {
                             onTouchMove={isChild ? handleTouchMove : undefined}
                             onTouchEnd={isChild ? () => handleTouchEnd(est.id, item.id) : undefined}
                           >
-                          <div className={`mb-2 text-base ${isParent ? "font-semibold" : "font-medium"}`}>
-                            <div className="flex items-center gap-2">
-                              {isParent && (
-                                <button
-                                  onClick={() => toggleParent(item.id)}
-                                  className="text-muted-foreground hover:text-foreground"
-                                >
-                                  {isExpanded ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                  ) : (
-                                    <ChevronRight className="h-4 w-4" />
-                                  )}
-                                </button>
-                              )}
-                              <span>{item.description}</span>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className={`flex-1 text-base ${isParent ? "font-semibold" : "font-medium"}`}>
+                              <div className="flex items-center gap-2">
+                                {isParent && (
+                                  <button
+                                    onClick={() => toggleParent(item.id)}
+                                    className="text-muted-foreground hover:text-foreground"
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                )}
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={item.description}
+                                    onChange={(e) => updateLineItem(item.id, "description", e.target.value)}
+                                    className="flex-1 rounded border bg-background px-2 py-1 text-sm"
+                                    placeholder="Description"
+                                  />
+                                ) : (
+                                  <span>{item.description}</span>
+                                )}
+                              </div>
                             </div>
+                            {isEditing && (
+                              <div className="flex items-center gap-2">
+                                {isParent && (
+                                  <button
+                                    onClick={() => addLineItem(item.id)}
+                                    className="text-primary hover:text-primary/80"
+                                    title="Add child item"
+                                  >
+                                    <Plus className="h-5 w-5" />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => removeLineItem(item.id)}
+                                  className="text-red-600 hover:text-red-700"
+                                  title="Delete item"
+                                >
+                                  <Trash2 className="h-5 w-5" />
+                                </button>
+                              </div>
+                            )}
                           </div>
                           <div className="grid grid-cols-2 gap-y-1.5 text-sm">
-                            {item.timeHours && item.timeRate && (
+                            {(isEditing || (item.timeHours && item.timeRate)) && !isParent && (
                               <>
                                 <div className="text-muted-foreground">Time:</div>
-                                <div className="text-right">{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</div>
+                                {isEditing ? (
+                                  <div className="flex gap-1 justify-end">
+                                    <input
+                                      type="number"
+                                      value={item.timeHours || ""}
+                                      onChange={(e) => updateLineItem(item.id, "timeHours", e.target.value)}
+                                      className="w-16 rounded border bg-background px-2 py-1 text-sm text-right"
+                                      placeholder="Hrs"
+                                      step="0.5"
+                                    />
+                                    <span className="self-center text-xs">@</span>
+                                    <input
+                                      type="number"
+                                      value={item.timeRate || ""}
+                                      onChange={(e) => updateLineItem(item.id, "timeRate", e.target.value)}
+                                      className="w-20 rounded border bg-background px-2 py-1 text-sm text-right"
+                                      placeholder="Rate"
+                                      step="1"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="text-right">{item.timeHours} hrs @ {formatCurrency(item.timeRate)}/hr</div>
+                                )}
                               </>
                             )}
-                            {item.materialsCost && (
+                            {(isEditing || item.materialsCost) && !isParent && (
                               <>
                                 <div className="text-muted-foreground">Materials:</div>
-                                <div className="text-right">{formatCurrency(item.materialsCost)}</div>
+                                {isEditing ? (
+                                  <input
+                                    type="number"
+                                    value={item.materialsCost || ""}
+                                    onChange={(e) => updateLineItem(item.id, "materialsCost", e.target.value)}
+                                    className="rounded border bg-background px-2 py-1 text-sm text-right"
+                                    placeholder="Cost"
+                                    step="0.01"
+                                  />
+                                ) : (
+                                  <div className="text-right">{formatCurrency(item.materialsCost)}</div>
+                                )}
                               </>
                             )}
                             <div className="text-muted-foreground">Total:</div>
@@ -759,6 +824,17 @@ export default function ProjectDetailPage() {
                       </div>
                       );
                     })}
+                    {isEditing && (
+                      <div className="border-t p-4">
+                        <button
+                          onClick={() => addLineItem(null)}
+                          className="flex items-center gap-2 text-sm text-primary hover:underline"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Section
+                        </button>
+                      </div>
+                    )}
                     <div className="border-t bg-muted/30 p-4">
                       <div className="flex justify-between font-semibold text-base">
                         <span>Total</span>
