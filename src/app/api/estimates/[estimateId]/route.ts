@@ -82,7 +82,7 @@ export async function PATCH(
       const item = allItems[i];
       const parentId: string | null = item.isParent ? null : currentParentId;
 
-      const created = await prisma.estimateLineItem.create({
+      const created: { id: string } = await prisma.estimateLineItem.create({
         data: {
           estimateId: params.estimateId,
           catalogItemId: item.catalogItemId || null,
