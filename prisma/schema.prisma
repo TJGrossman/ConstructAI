@@ -66,6 +66,11 @@ model Project {
   description String?
   status      String   @default("active")
   shareToken  String   @unique @default(cuid())
+
+  // Budget tracking
+  estimatedCost Decimal? @db.Decimal(12, 2) // From original estimate, updated by approved change orders
+  maxBudget     Decimal? @db.Decimal(12, 2) // Hard limit for "we need to talk" threshold
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -143,6 +148,11 @@ model ChangeOrder {
   title       String
   description String
   status      String    @default("draft")
+
+  // Change order categorization
+  type           String   @default("customer_requested") // 'customer_requested' | 'unanticipated_issue'
+  approvedBudget Decimal? @db.Decimal(12, 2) // Customer-approved budget for this change
+
   costImpact  Decimal   @db.Decimal(12, 2)
   approvedAt  DateTime?
   createdAt   DateTime  @default(now())

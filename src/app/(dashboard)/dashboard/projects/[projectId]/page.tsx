@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2, ChevronDown, ChevronRight } from "lucide-react";
 import { ChatPanel } from "@/components/chat/ChatPanel";
+import { ReconciliationView } from "@/components/project/ReconciliationView";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 interface LineItem {
@@ -86,14 +87,14 @@ const statusColors: Record<string, string> = {
   active: "bg-green-100 text-green-700",
 };
 
-type Tab = "chat" | "estimates" | "change-orders" | "invoices" | "history";
+type Tab = "status" | "chat" | "estimates" | "change-orders" | "invoices" | "history";
 
 export default function ProjectDetailPage() {
   const params = useParams();
   const projectId = params.projectId as string;
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<Tab>("chat");
+  const [activeTab, setActiveTab] = useState<Tab>("status");
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
   const [swipeState, setSwipeState] = useState<{
     itemId: string | null;
@@ -288,6 +289,7 @@ export default function ProjectDetailPage() {
 
   const conversation = project.conversations[0];
   const tabs: { key: Tab; label: string; count?: number }[] = [
+    { key: "status", label: "Status" },
     { key: "chat", label: "Chat" },
     { key: "estimates", label: "Estimates", count: project.estimates.length },
     { key: "change-orders", label: "Change Orders", count: project.changeOrders.length },
@@ -343,6 +345,10 @@ export default function ProjectDetailPage() {
 
       {/* Content */}
       <div className="min-h-0 flex-1">
+        {activeTab === "status" && (
+          <ReconciliationView projectId={projectId} />
+        )}
+
         {activeTab === "chat" && (
           <div className="h-full rounded-lg border">
             <ChatPanel

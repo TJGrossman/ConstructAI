@@ -2,51 +2,51 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { calculateVariance } from "@/lib/ai/parsers/workEntry";
 
 export const dynamic = 'force-dynamic';
 
-interface LineItemReconciliation {
-  lineItemId: string;
+interface ReconciliationLineItem {
+  id: string;
   description: string;
-  category: string | null;
-  estimatedTimeCost: number;
-  estimatedMaterialsCost: number;
-  estimatedTotal: number;
-  actualTimeCost: number;
-  actualMaterialsCost: number;
-  actualTotal: number;
+  parentId: string | null;
+  estimatedCost: number;
+  changeOrders: {
+    type: 'customer_requested' | 'unanticipated_issue';
+    impact: number;
+    changeOrderNumber: number;
+    title: string;
+  }[];
+  adjustedCost: number;
+  invoicedCost: number;
+  invoices: {
+    number: number;
+    status: string;
+    amount: number;
+  }[];
   variance: number;
   variancePercent: number;
-  isOverBudget: boolean;
-  workEntryCount: number;
+  children?: ReconciliationLineItem[];
 }
 
-interface ProjectReconciliation {
-  projectId: string;
+interface ReconciliationData {
   projectName: string;
-  estimates: Array<{
-    estimateId: string;
-    estimateNumber: number;
-    estimateTitle: string;
-    lineItems: LineItemReconciliation[];
-    totalEstimated: number;
-    totalActual: number;
-    totalVariance: number;
-    totalVariancePercent: number;
-  }>;
-  grandTotalEstimated: number;
-  grandTotalActual: number;
-  grandTotalVariance: number;
-  grandTotalVariancePercent: number;
+  customerName: string;
+  originalEstimate: number;
+  customerRequestedChanges: number;
+  unanticipatedChanges: number;
+  estimatedCost: number;
+  maxBudget: number | null;
+  invoicedTotal: number;
+  paidTotal: number;
+  unpaidTotal: number;
+  remainingBudget: number;
+  variance: number;
+  variancePercent: number;
+  lineItems: ReconciliationLineItem[];
 }
 
-/**
- * GET /api/projects/[projectId]/reconciliation
- * Calculate actual vs. estimated costs with variance
- */
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: { projectId: string } }
 ) {
   const session = await getServerSession(authOptions);
@@ -55,119 +55,150 @@ export async function GET(
   }
 
   const userId = (session.user as { id: string }).id;
-  const { projectId } = params;
 
-  // Verify project ownership
   const project = await prisma.project.findFirst({
-    where: { id: projectId, userId },
+    where: { id: params.projectId, userId },
+    include: {
+      customer: true,
+      estimates: {
+        where: { status: "approved" },
+        include: { lineItems: { orderBy: { sortOrder: "asc" } } },
+        orderBy: { approvedAt: "asc" },
+        take: 1,
+      },
+      changeOrders: {
+        where: { status: "approved" },
+        include: { lineItems: true },
+        orderBy: { approvedAt: "asc" },
+      },
+      invoices: {
+        include: { lineItems: true },
+        orderBy: { createdAt: "asc" },
+      },
+    },
   });
 
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  // Get all estimates for the project with line items and work entries
-  const estimates = await prisma.estimate.findMany({
-    where: { projectId },
-    include: {
-      lineItems: {
-        include: {
-          workEntries: {
-            where: { status: "approved" }, // Only count approved work entries
-          },
-        },
-        orderBy: { sortOrder: "asc" },
-      },
-    },
-    orderBy: { number: "asc" },
-  });
-
-  const reconciliation: ProjectReconciliation = {
-    projectId,
-    projectName: project.name,
-    estimates: [],
-    grandTotalEstimated: 0,
-    grandTotalActual: 0,
-    grandTotalVariance: 0,
-    grandTotalVariancePercent: 0,
-  };
-
-  // Process each estimate
-  for (const estimate of estimates) {
-    const lineItemReconciliations: LineItemReconciliation[] = [];
-    let estimateTotalEstimated = 0;
-    let estimateTotalActual = 0;
-
-    // Process each line item (only root-level items to avoid double-counting hierarchy)
-    const rootLineItems = estimate.lineItems.filter((item) => !item.parentId);
-
-    for (const lineItem of rootLineItems) {
-      const estimatedTimeCost = Number(lineItem.timeCost || 0);
-      const estimatedMaterialsCost = Number(lineItem.materialsCost || 0);
-      const estimatedTotal = Number(lineItem.total);
-
-      // Sum actual costs from work entries
-      const actualTimeCost = lineItem.workEntries.reduce(
-        (sum, we) => sum + Number(we.actualTimeCost || 0),
-        0
-      );
-      const actualMaterialsCost = lineItem.workEntries.reduce(
-        (sum, we) => sum + Number(we.actualMaterialsCost || 0),
-        0
-      );
-      const actualTotal = lineItem.workEntries.reduce(
-        (sum, we) => sum + Number(we.actualTotal),
-        0
-      );
-
-      const varianceData = calculateVariance(estimatedTotal, actualTotal);
-
-      lineItemReconciliations.push({
-        lineItemId: lineItem.id,
-        description: lineItem.description,
-        category: lineItem.category,
-        estimatedTimeCost,
-        estimatedMaterialsCost,
-        estimatedTotal,
-        actualTimeCost,
-        actualMaterialsCost,
-        actualTotal,
-        variance: varianceData.variance,
-        variancePercent: varianceData.variancePercent,
-        isOverBudget: varianceData.isOverBudget,
-        workEntryCount: lineItem.workEntries.length,
-      });
-
-      estimateTotalEstimated += estimatedTotal;
-      estimateTotalActual += actualTotal;
-    }
-
-    const estimateVariance = calculateVariance(
-      estimateTotalEstimated,
-      estimateTotalActual
-    );
-
-    reconciliation.estimates.push({
-      estimateId: estimate.id,
-      estimateNumber: estimate.number,
-      estimateTitle: estimate.title,
-      lineItems: lineItemReconciliations,
-      totalEstimated: estimateTotalEstimated,
-      totalActual: estimateTotalActual,
-      totalVariance: estimateVariance.variance,
-      totalVariancePercent: estimateVariance.variancePercent,
-    });
-
-    reconciliation.grandTotalEstimated += estimateTotalEstimated;
-    reconciliation.grandTotalActual += estimateTotalActual;
+  const originalEstimate = project.estimates[0];
+  if (!originalEstimate) {
+    return NextResponse.json({ error: "No approved estimate found" }, { status: 404 });
   }
 
-  const grandVariance = calculateVariance(
-    reconciliation.grandTotalEstimated,
-    reconciliation.grandTotalActual
-  );
-  reconciliation.grandTotalVariance = grandVariance.variance;
-  reconciliation.grandTotalVariancePercent = grandVariance.variancePercent;
+  const lineItemMap = new Map<string, ReconciliationLineItem>();
 
-  return NextResponse.json({ reconciliation }, { status: 200 });
+  originalEstimate.lineItems.forEach((item) => {
+    const estimatedCost = Number(item.total);
+    lineItemMap.set(item.id, {
+      id: item.id,
+      description: item.description,
+      parentId: item.parentId,
+      estimatedCost,
+      changeOrders: [],
+      adjustedCost: estimatedCost,
+      invoicedCost: 0,
+      invoices: [],
+      variance: 0,
+      variancePercent: 0,
+    });
+  });
+
+  project.changeOrders.forEach((co) => {
+    co.lineItems.forEach((item) => {
+      const matchingEstimateItem = originalEstimate.lineItems.find(
+        (ei) => ei.description === item.description
+      );
+      if (matchingEstimateItem) {
+        const reconItem = lineItemMap.get(matchingEstimateItem.id);
+        if (reconItem) {
+          const impact = Number(item.total);
+          reconItem.changeOrders.push({
+            type: co.type as 'customer_requested' | 'unanticipated_issue',
+            impact,
+            changeOrderNumber: co.number,
+            title: co.title,
+          });
+          reconItem.adjustedCost += impact;
+        }
+      }
+    });
+  });
+
+  project.invoices.forEach((invoice) => {
+    invoice.lineItems.forEach((item) => {
+      if (item.estimateLineItemId) {
+        const reconItem = lineItemMap.get(item.estimateLineItemId);
+        if (reconItem) {
+          const amount = Number(item.total);
+          reconItem.invoicedCost += amount;
+          reconItem.invoices.push({
+            number: invoice.number,
+            status: invoice.status,
+            amount,
+          });
+        }
+      }
+    });
+  });
+
+  lineItemMap.forEach((item) => {
+    item.variance = item.adjustedCost - item.invoicedCost;
+    item.variancePercent = item.adjustedCost > 0 ? (item.variance / item.adjustedCost) * 100 : 0;
+  });
+
+  const topLevelItems: ReconciliationLineItem[] = [];
+  const itemsArray = Array.from(lineItemMap.values());
+
+  itemsArray.forEach((item) => {
+    if (!item.parentId) {
+      const children = itemsArray.filter((i) => i.parentId === item.id);
+      if (children.length > 0) {
+        item.estimatedCost = children.reduce((sum, c) => sum + c.estimatedCost, 0);
+        item.adjustedCost = children.reduce((sum, c) => sum + c.adjustedCost, 0);
+        item.invoicedCost = children.reduce((sum, c) => sum + c.invoicedCost, 0);
+        item.variance = item.adjustedCost - item.invoicedCost;
+        item.variancePercent = item.adjustedCost > 0 ? (item.variance / item.adjustedCost) * 100 : 0;
+        item.changeOrders = children.flatMap((c) => c.changeOrders);
+        item.invoices = children.flatMap((c) => c.invoices);
+        item.children = children;
+      }
+      topLevelItems.push(item);
+    }
+  });
+
+  const originalEstimateTotal = Number(originalEstimate.total);
+  const customerRequestedChanges = project.changeOrders
+    .filter((co) => co.type === 'customer_requested')
+    .reduce((sum, co) => sum + Number(co.costImpact), 0);
+  const unanticipatedChanges = project.changeOrders
+    .filter((co) => co.type === 'unanticipated_issue')
+    .reduce((sum, co) => sum + Number(co.costImpact), 0);
+  const estimatedCost = originalEstimateTotal + customerRequestedChanges + unanticipatedChanges;
+  const invoicedTotal = project.invoices.reduce((sum, inv) => sum + Number(inv.total), 0);
+  const paidTotal = project.invoices.filter((inv) => inv.status === 'paid').reduce((sum, inv) => sum + Number(inv.total), 0);
+  const unpaidTotal = invoicedTotal - paidTotal;
+  const remainingBudget = estimatedCost - invoicedTotal;
+  const variance = estimatedCost - invoicedTotal;
+  const variancePercent = estimatedCost > 0 ? (variance / estimatedCost) * 100 : 0;
+
+  const data: ReconciliationData = {
+    projectName: project.name,
+    customerName: project.customer.name,
+    originalEstimate: originalEstimateTotal,
+    customerRequestedChanges,
+    unanticipatedChanges,
+    estimatedCost,
+    maxBudget: project.maxBudget ? Number(project.maxBudget) : null,
+    invoicedTotal,
+    paidTotal,
+    unpaidTotal,
+    remainingBudget,
+    variance,
+    variancePercent,
+    lineItems: topLevelItems,
+  };
+
+  return NextResponse.json(data);
 }
