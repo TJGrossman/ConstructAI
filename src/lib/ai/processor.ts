@@ -23,7 +23,7 @@ export interface LineItem {
   total: number;
 
   notes?: string;
-  action?: "add" | "remove" | "modify";
+  action?: string;
   originalDesc?: string;
 }
 
