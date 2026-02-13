@@ -18,8 +18,22 @@ export async function POST(req: NextRequest) {
 
   const userId = (session.user as { id: string }).id;
 
+  // SAFETY: Only allow demo accounts to reset data
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isDemoAccount: true, email: true }
+  });
+
+  if (!user?.isDemoAccount) {
+    console.log('[Reset Data] Blocked - user is not a demo account:', user?.email);
+    return NextResponse.json(
+      { error: "This feature is only available for demo accounts" },
+      { status: 403 }
+    );
+  }
+
   try {
-    console.log('[Reset Data] Starting data wipe for user:', userId);
+    console.log('[Reset Data] Starting data wipe for demo account:', user.email);
 
     // Delete in correct order (respecting foreign key constraints)
 

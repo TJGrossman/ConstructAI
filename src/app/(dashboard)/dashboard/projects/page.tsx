@@ -17,6 +17,11 @@ export default async function ProjectsPage() {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id: string })?.id;
 
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isDemoAccount: true }
+  });
+
   const projects = await prisma.project.findMany({
     where: { userId },
     include: {
@@ -31,7 +36,7 @@ export default async function ProjectsPage() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Projects</h1>
         <div className="flex items-center gap-2">
-          <ResetDataButton />
+          <ResetDataButton isDemoAccount={user?.isDemoAccount || false} />
           <Link
             href="/dashboard/projects/new"
             className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 
-export function ResetDataButton() {
+export function ResetDataButton({ isDemoAccount }: { isDemoAccount: boolean }) {
+  if (!isDemoAccount) return null;
   const [isLoading, setIsLoading] = useState(false);
 
   const handleReset = async () => {
