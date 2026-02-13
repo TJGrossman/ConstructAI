@@ -6,22 +6,23 @@ import { prisma } from "@/lib/db";
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const userId = (session.user as { id: string }).id;
-  const { projectId, workEntries } = await req.json();
+    const userId = (session.user as { id: string }).id;
+    const { projectId, workEntries } = await req.json();
 
-  console.log('[Work Entries] Received:', { projectId, workEntriesCount: workEntries?.length, workEntries });
+    console.log('[Work Entries] Received:', { projectId, workEntriesCount: workEntries?.length, workEntries });
 
-  if (!projectId || !workEntries?.length) {
-    return NextResponse.json(
-      { error: "projectId and workEntries are required" },
-      { status: 400 }
-    );
-  }
+    if (!projectId || !workEntries?.length) {
+      return NextResponse.json(
+        { error: "projectId and workEntries are required" },
+        { status: 400 }
+      );
+    }
 
   // Verify project ownership
   const project = await prisma.project.findFirst({
@@ -160,4 +161,15 @@ export async function POST(req: NextRequest) {
   });
 
   return NextResponse.json(updatedInvoice, { status: 201 });
+  } catch (error) {
+    console.error('[Work Entries] Error:', error);
+    return NextResponse.json(
+      {
+        error: "Failed to create work entries",
+        details: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      },
+      { status: 500 }
+    );
+  }
 }
