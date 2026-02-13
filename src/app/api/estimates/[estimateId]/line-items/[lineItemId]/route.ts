@@ -37,12 +37,12 @@ export async function DELETE(
   });
 
   const subtotal = remainingItems.reduce((sum, item) => {
-    const timeCost = item.timeCost ? parseFloat(item.timeCost as string) : 0;
-    const materialsCost = item.materialsCost ? parseFloat(item.materialsCost as string) : 0;
+    const timeCost = item.timeCost ? Number(item.timeCost) : 0;
+    const materialsCost = item.materialsCost ? Number(item.materialsCost) : 0;
     return sum + timeCost + materialsCost;
   }, 0);
 
-  const taxRate = parseFloat(estimate.taxRate as string);
+  const taxRate = Number(estimate.taxRate);
   const taxAmount = subtotal * taxRate;
   const total = subtotal + taxAmount;
 
@@ -50,9 +50,9 @@ export async function DELETE(
   await prisma.estimate.update({
     where: { id: params.estimateId },
     data: {
-      subtotal: subtotal.toString(),
-      taxAmount: taxAmount.toString(),
-      total: total.toString(),
+      subtotal,
+      taxAmount,
+      total,
     },
   });
 
