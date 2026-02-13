@@ -64,10 +64,13 @@ export async function POST(req: NextRequest) {
       lineItems: {
         create: (lineItems as LineItem[]).map((item, index) => ({
           description: item.description,
-          quantity: item.quantity,
-          unit: item.unit,
-          unitPrice: item.unitPrice,
+          category: item.category || null,
+          timeHours: item.timeHours ?? null,
+          timeRate: item.timeRate ?? null,
+          timeCost: item.timeCost ?? null,
+          materialsCost: item.materialsCost ?? null,
           total: item.total,
+          notes: item.notes || null,
           sortOrder: index,
         })),
       },
