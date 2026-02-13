@@ -223,6 +223,7 @@ export default function ProjectDetailPage() {
               description: item.description,
               catalogItemId: item.category || undefined,
               category: item.category || undefined,
+              isParent: !item.parentId,
               parentId: item.parentId || undefined,
               timeHours: item.timeHours ? Number(item.timeHours) : null,
               timeRate: item.timeRate ? Number(item.timeRate) : null,
