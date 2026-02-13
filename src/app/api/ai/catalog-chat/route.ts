@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { gemini } from "@/lib/ai/client";
+import { openai } from "@/lib/ai/client";
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,16 +38,17 @@ When returning catalog items, use this JSON format:
 
 Only include catalogItems when you have complete information to update the catalog.`;
 
-    const model = gemini.getGenerativeModel({
-      model: "gemini-2.0-flash",
-      systemInstruction: {
-        parts: [{ text: systemPrompt }],
-        role: "user",
-      },
+    const response = await openai.chat.completions.create({
+      model: "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: message },
+      ],
+      temperature: 0.7,
+      max_tokens: 2000,
     });
 
-    const result = await model.generateContent(message);
-    const text = result.response.text();
+    const text = response.choices[0]?.message?.content || "";
 
     // Try to parse JSON response
     let parsedResponse;

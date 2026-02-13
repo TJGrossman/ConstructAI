@@ -1,12 +1,15 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 
-const globalForGemini = globalThis as unknown as {
-  gemini: GoogleGenerativeAI;
+const globalForOpenAI = globalThis as unknown as {
+  openai: OpenAI;
 };
 
-export const gemini =
-  globalForGemini.gemini ||
-  new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+export const openai =
+  globalForOpenAI.openai ||
+  new OpenAI({
+    apiKey: process.env.TOGETHER_API_KEY,
+    baseURL: "https://api.together.xyz/v1",
+  });
 
 if (process.env.NODE_ENV !== "production")
-  globalForGemini.gemini = gemini;
+  globalForOpenAI.openai = openai;
