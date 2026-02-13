@@ -53,7 +53,13 @@ export async function processMessage(
     projectContext
   );
 
-  const model = gemini.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+  const model = gemini.getGenerativeModel({
+    model: "gemini-2.0-flash-exp",
+    systemInstruction: {
+      parts: [{ text: systemPrompt }],
+      role: "user",
+    },
+  });
 
   // Build chat history for Gemini
   const history = conversationHistory.map((msg) => ({
@@ -61,10 +67,7 @@ export async function processMessage(
     parts: [{ text: msg.content }],
   }));
 
-  const chat = model.startChat({
-    history,
-    systemInstruction: systemPrompt,
-  });
+  const chat = model.startChat({ history });
 
   const result = await chat.sendMessage(userMessage);
   const text = result.response.text();

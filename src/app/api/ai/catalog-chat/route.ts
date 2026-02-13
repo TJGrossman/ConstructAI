@@ -40,7 +40,10 @@ Only include catalogItems when you have complete information to update the catal
 
     const model = gemini.getGenerativeModel({
       model: "gemini-2.0-flash-exp",
-      systemInstruction: systemPrompt,
+      systemInstruction: {
+        parts: [{ text: systemPrompt }],
+        role: "user",
+      },
     });
 
     const result = await model.generateContent(message);
