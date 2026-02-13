@@ -94,14 +94,14 @@ export async function POST(req: NextRequest) {
         },
       });
     } else {
-      // Create new invoice line item
+      // Create new invoice line item (flat structure - no hierarchy for work entries)
       await prisma.invoiceLineItem.create({
         data: {
           invoiceId: invoice.id,
           estimateLineItemId: entry.estimateLineItemId,
           description: entry.description || estimateLineItem.description,
           category: estimateLineItem.category,
-          parentId: estimateLineItem.parentId,
+          parentId: null, // Work entries are flat items, not hierarchical
           timeHours: entry.actualTimeHours ? Number(entry.actualTimeHours) : null,
           timeRate: entry.actualTimeRate ? Number(entry.actualTimeRate) : null,
           timeCost: entry.actualTimeCost ? Number(entry.actualTimeCost) : null,
