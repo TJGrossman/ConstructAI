@@ -2,16 +2,25 @@
 
 import { useState } from "react";
 import { formatCurrency } from "@/lib/utils";
-import { Check, X, Pencil } from "lucide-react";
+import { Check, X, Pencil, ChevronDown, ChevronRight } from "lucide-react";
 
 interface LineItem {
   description: string;
   catalogItemId?: string;
-  quantity: number;
-  unit: string;
-  unitPrice: number;
-  total: number;
   category?: string;
+
+  // Hierarchical structure
+  isParent?: boolean;
+  parentId?: string;
+
+  // Dual time + materials structure
+  timeHours?: number | null;
+  timeRate?: number | null;
+  timeCost?: number | null;
+  materialsCost?: number | null;
+  total: number;
+
+  notes?: string;
   action?: string;
   originalDesc?: string;
 }
@@ -37,8 +46,21 @@ export function StructuredPreview({
   const [title, setTitle] = useState(initialTitle || "");
   const [notes, setNotes] = useState(initialNotes || "");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [expandedItems, setExpandedItems] = useState<Set<number>>(
+    new Set(initialItems.map((_, idx) => idx).filter((idx) => initialItems[idx].isParent))
+  );
 
-  const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+  // Calculate subtotal (only root-level items to avoid double-counting hierarchy)
+  const rootItems = items.filter((_, idx) => {
+    // Check if this item is a child (comes after a parent)
+    for (let i = idx - 1; i >= 0; i--) {
+      if (items[i].isParent) {
+        return false;
+      }
+    }
+    return true;
+  });
+  const subtotal = rootItems.reduce((sum, item) => sum + item.total, 0);
 
   const typeLabels = {
     estimate: "Estimate",
@@ -51,10 +73,23 @@ export function StructuredPreview({
       prev.map((item, i) => {
         if (i !== index) return item;
         const updated = { ...item, ...updates };
-        if (updates.quantity !== undefined || updates.unitPrice !== undefined) {
-          updated.total =
-            Math.round(updated.quantity * updated.unitPrice * 100) / 100;
+
+        // Recalculate time cost if time fields change
+        if (
+          updates.timeHours !== undefined ||
+          updates.timeRate !== undefined
+        ) {
+          const hours = updates.timeHours ?? item.timeHours ?? 0;
+          const rate = updates.timeRate ?? item.timeRate ?? 0;
+          updated.timeCost = Math.round(hours * rate * 100) / 100;
         }
+
+        // Recalculate total
+        updated.total =
+          Math.round(
+            ((updated.timeCost || 0) + (updated.materialsCost || 0)) * 100
+          ) / 100;
+
         return updated;
       })
     );
@@ -62,6 +97,18 @@ export function StructuredPreview({
 
   const removeItem = (index: number) => {
     setItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const toggleExpand = (index: number) => {
+    setExpandedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
   };
 
   return (
@@ -91,107 +138,170 @@ export function StructuredPreview({
                 <th className="px-4 py-2 font-medium">Action</th>
               )}
               <th className="px-4 py-2 font-medium">Description</th>
-              <th className="px-4 py-2 font-medium text-right">Qty</th>
-              <th className="px-4 py-2 font-medium">Unit</th>
-              <th className="px-4 py-2 font-medium text-right">Rate</th>
+              <th className="px-4 py-2 font-medium">Time</th>
+              <th className="px-4 py-2 font-medium">Materials</th>
               <th className="px-4 py-2 font-medium text-right">Total</th>
               <th className="w-10 px-2 py-2" />
             </tr>
           </thead>
           <tbody>
-            {items.map((item, idx) => (
-              <tr key={idx} className="border-b">
-                {type === "change_order" && (
-                  <td className="px-4 py-2">
-                    <span
-                      className={`rounded px-1.5 py-0.5 text-xs font-medium ${
-                        item.action === "add"
-                          ? "bg-green-100 text-green-700"
-                          : item.action === "remove"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-yellow-100 text-yellow-700"
-                      }`}
-                    >
-                      {item.action}
-                    </span>
-                  </td>
-                )}
-                <td className="px-4 py-2">
-                  {editingIndex === idx ? (
-                    <input
-                      type="text"
-                      value={item.description}
-                      onChange={(e) =>
-                        updateItem(idx, { description: e.target.value })
-                      }
-                      className="w-full rounded border px-2 py-1 text-sm"
-                      autoFocus
-                      onBlur={() => setEditingIndex(null)}
-                    />
-                  ) : (
-                    <span
-                      className="cursor-pointer hover:underline"
-                      onClick={() => setEditingIndex(idx)}
-                    >
-                      {item.description}
-                    </span>
+            {items.map((item, idx) => {
+              // Check if this is a child item (comes after a parent and is not itself a parent)
+              let parentIndex = -1;
+              for (let i = idx - 1; i >= 0; i--) {
+                if (items[i].isParent) {
+                  parentIndex = i;
+                  break;
+                }
+              }
+              const isChild = parentIndex >= 0 && !item.isParent;
+              const shouldShow = !isChild || expandedItems.has(parentIndex);
+
+              if (!shouldShow) return null;
+
+              return (
+                <tr
+                  key={idx}
+                  className={`border-b ${item.isParent ? "bg-muted/30 font-medium" : ""} ${isChild ? "bg-muted/10" : ""}`}
+                >
+                  {type === "change_order" && (
+                    <td className="px-4 py-2">
+                      {item.action && (
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                            item.action === "add"
+                              ? "bg-green-100 text-green-700"
+                              : item.action === "remove"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-yellow-100 text-yellow-700"
+                          }`}
+                        >
+                          {item.action}
+                        </span>
+                      )}
+                    </td>
                   )}
-                </td>
-                <td className="px-4 py-2 text-right">
-                  <input
-                    type="number"
-                    value={item.quantity}
-                    onChange={(e) =>
-                      updateItem(idx, {
-                        quantity: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="w-16 rounded border px-2 py-1 text-right text-sm"
-                    step="0.01"
-                  />
-                </td>
-                <td className="px-4 py-2 text-sm text-muted-foreground">
-                  {item.unit}
-                </td>
-                <td className="px-4 py-2 text-right">
-                  <input
-                    type="number"
-                    value={item.unitPrice}
-                    onChange={(e) =>
-                      updateItem(idx, {
-                        unitPrice: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="w-24 rounded border px-2 py-1 text-right text-sm"
-                    step="0.01"
-                  />
-                </td>
-                <td className="px-4 py-2 text-right font-medium">
-                  {formatCurrency(item.total)}
-                </td>
-                <td className="px-2 py-2">
-                  <button
-                    onClick={() =>
-                      editingIndex === idx
-                        ? setEditingIndex(null)
-                        : removeItem(idx)
-                    }
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    {editingIndex === idx ? (
-                      <Pencil className="h-3.5 w-3.5" />
-                    ) : (
-                      <X className="h-3.5 w-3.5" />
+                  <td className={`px-4 py-2 ${isChild ? "pl-8" : ""}`}>
+                    <div className="flex items-center gap-2">
+                      {item.isParent && (
+                        <button
+                          onClick={() => toggleExpand(idx)}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          {expandedItems.has(idx) ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </button>
+                      )}
+                      {editingIndex === idx ? (
+                        <input
+                          type="text"
+                          value={item.description}
+                          onChange={(e) =>
+                            updateItem(idx, { description: e.target.value })
+                          }
+                          className="w-full rounded border px-2 py-1 text-sm"
+                          autoFocus
+                          onBlur={() => setEditingIndex(null)}
+                        />
+                      ) : (
+                        <div className="flex-1">
+                          <span
+                            className="cursor-pointer hover:underline"
+                            onClick={() => setEditingIndex(idx)}
+                          >
+                            {item.description}
+                          </span>
+                          {item.notes && (
+                            <div className="mt-0.5 text-xs text-muted-foreground">
+                              {item.notes}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-2">
+                    {!item.isParent && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <input
+                          type="number"
+                          value={item.timeHours || ""}
+                          onChange={(e) =>
+                            updateItem(idx, {
+                              timeHours: parseFloat(e.target.value) || null,
+                            })
+                          }
+                          placeholder="hrs"
+                          className="w-14 rounded border px-1.5 py-1 text-right"
+                          step="0.5"
+                        />
+                        <span className="text-muted-foreground">×</span>
+                        <input
+                          type="number"
+                          value={item.timeRate || ""}
+                          onChange={(e) =>
+                            updateItem(idx, {
+                              timeRate: parseFloat(e.target.value) || null,
+                            })
+                          }
+                          placeholder="$/hr"
+                          className="w-16 rounded border px-1.5 py-1 text-right"
+                          step="1"
+                        />
+                        {item.timeCost ? (
+                          <span className="text-muted-foreground">
+                            = {formatCurrency(item.timeCost)}
+                          </span>
+                        ) : null}
+                      </div>
                     )}
-                  </button>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-4 py-2">
+                    {!item.isParent && (
+                      <input
+                        type="number"
+                        value={item.materialsCost || ""}
+                        onChange={(e) =>
+                          updateItem(idx, {
+                            materialsCost: parseFloat(e.target.value) || null,
+                          })
+                        }
+                        placeholder="$0.00"
+                        className="w-24 rounded border px-2 py-1 text-right text-xs"
+                        step="0.01"
+                      />
+                    )}
+                  </td>
+                  <td className="px-4 py-2 text-right font-medium">
+                    {formatCurrency(item.total)}
+                  </td>
+                  <td className="px-2 py-2">
+                    <button
+                      onClick={() =>
+                        editingIndex === idx
+                          ? setEditingIndex(null)
+                          : removeItem(idx)
+                      }
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      {editingIndex === idx ? (
+                        <Pencil className="h-3.5 w-3.5" />
+                      ) : (
+                        <X className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
           <tfoot>
             <tr className="font-medium">
               <td
-                colSpan={type === "change_order" ? 5 : 4}
+                colSpan={type === "change_order" ? 4 : 3}
                 className="px-4 py-3 text-right"
               >
                 Subtotal

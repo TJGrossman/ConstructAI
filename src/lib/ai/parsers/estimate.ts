@@ -1,21 +1,52 @@
 import { LineItem } from "../processor";
+import { validateLineItems } from "../validators/lineItem";
 
+/**
+ * Validates and normalizes estimate line items for the new dual time+materials structure
+ */
 export function validateEstimateLineItems(items: LineItem[]): LineItem[] {
+  // First validate with the new validators
+  const validationResult = validateLineItems(items);
+  if (!validationResult.isValid) {
+    throw new Error(`Line item validation failed: ${validationResult.errors.join(", ")}`);
+  }
+
   return items
-    .filter((item) => item.description && item.quantity > 0 && item.unitPrice >= 0)
-    .map((item) => ({
-      ...item,
-      quantity: Math.round(item.quantity * 100) / 100,
-      unitPrice: Math.round(item.unitPrice * 100) / 100,
-      total: Math.round(item.quantity * item.unitPrice * 100) / 100,
-    }));
+    .filter((item) => item.description)
+    .map((item) => {
+      // Calculate time cost if time fields are present
+      const timeHours = item.timeHours ?? null;
+      const timeRate = item.timeRate ?? null;
+      const timeCost = timeHours && timeRate ? Math.round(timeHours * timeRate * 100) / 100 : null;
+
+      // Round materials cost
+      const materialsCost = item.materialsCost ? Math.round(item.materialsCost * 100) / 100 : null;
+
+      // Calculate total
+      const total = Math.round(((timeCost || 0) + (materialsCost || 0)) * 100) / 100;
+
+      return {
+        ...item,
+        timeHours,
+        timeRate,
+        timeCost,
+        materialsCost,
+        total,
+      };
+    });
 }
 
+/**
+ * Calculates estimate totals from hierarchical line items
+ * Only sums root-level items (no parentId) to avoid double-counting
+ */
 export function calculateEstimateTotals(
   lineItems: LineItem[],
   taxRate: number
 ) {
-  const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
+  // Sum only root-level items (items without a parentId)
+  const rootItems = lineItems.filter((item) => !item.parentId);
+  const subtotal = rootItems.reduce((sum, item) => sum + item.total, 0);
   const taxAmount = Math.round(subtotal * (taxRate / 100) * 100) / 100;
   const total = Math.round((subtotal + taxAmount) * 100) / 100;
 

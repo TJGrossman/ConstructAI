@@ -8,13 +8,34 @@ import { ServiceCatalogItem } from "@prisma/client";
 export interface LineItem {
   description: string;
   catalogItemId?: string;
-  quantity: number;
-  unit: string;
-  unitPrice: number;
-  total: number;
   category?: string;
+
+  // Hierarchical structure
+  isParent?: boolean; // True if this is a grouping/parent item
+  parentId?: string; // For child items during updates
+
+  // Dual time + materials structure
+  // At least one of timeCost or materialsCost must be non-zero
+  timeHours?: number | null;
+  timeRate?: number | null;
+  timeCost?: number | null;
+  materialsCost?: number | null;
+  total: number;
+
+  notes?: string;
   action?: "add" | "remove" | "modify";
   originalDesc?: string;
+}
+
+export interface WorkEntryItem {
+  estimateLineItemId: string;
+  description: string;
+  actualTimeHours?: number | null;
+  actualTimeRate?: number | null;
+  actualTimeCost?: number | null;
+  actualMaterialsCost?: number | null;
+  actualTotal: number;
+  notes?: string;
 }
 
 export interface AIProcessingResult {
@@ -22,13 +43,15 @@ export interface AIProcessingResult {
     | "new_estimate"
     | "change_order"
     | "invoice_entry"
+    | "work_entry"
     | "question"
     | "general";
   message: string;
   structured?: {
-    type: "estimate" | "change_order" | "invoice";
+    type: "estimate" | "change_order" | "invoice" | "work_entry";
     title?: string;
-    lineItems: LineItem[];
+    lineItems?: LineItem[];
+    workEntries?: WorkEntryItem[];
     notes?: string;
   };
   followUpQuestion?: string;

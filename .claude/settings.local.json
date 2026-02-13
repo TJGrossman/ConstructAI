@@ -20,7 +20,12 @@
       "Bash(npm run build:*)",
       "Bash(npx tsc:*)",
       "Bash(timeout 120 sh:*)",
-      "Bash(npx next lint)"
+      "Bash(npx next lint)",
+      "Bash(cd:*)",
+      "Bash(cd /Users/theodoregrossman/Desktop/Claude\\\\ Code\\\\ Projects/ConstructAI && npx prisma format:*)",
+      "Bash(lsof -ti:3000)",
+      "Bash(cd /Users/theodoregrossman/Desktop/Claude\\\\ Code\\\\ Projects/ConstructAI && npx prisma db pull:*)",
+      "Bash(git checkout prisma/schema.prisma)"
     ]
   }
 }
