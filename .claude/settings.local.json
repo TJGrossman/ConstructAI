@@ -27,7 +27,8 @@
       "Bash(cd /Users/theodoregrossman/Desktop/Claude\\\\ Code\\\\ Projects/ConstructAI && npx prisma db pull:*)",
       "Bash(git checkout prisma/schema.prisma)",
       "Bash(grep:*)",
-      "Bash(git revert:*)"
+      "Bash(git revert:*)",
+      "Bash(ls:*)"
     ]
   }
 }

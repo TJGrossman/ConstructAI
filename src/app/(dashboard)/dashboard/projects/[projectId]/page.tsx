@@ -199,8 +199,8 @@ export default function ProjectDetailPage() {
     const screenWidth = window.innerWidth;
     const swipePercentage = swipeDistance / screenWidth;
 
-    // Delete if swiped more than 70%
-    if (swipePercentage > 0.7) {
+    // Delete if swiped more than 50% (lowered from 70%)
+    if (swipePercentage > 0.5) {
       // Keep swipe state briefly to show animation
       setTimeout(() => {
         setSwipeState({
@@ -480,18 +480,24 @@ export default function ProjectDetailPage() {
 
                       return (
                         <div key={item.id} className="relative overflow-hidden">
-                          {/* Delete button background (shows when swiping) */}
-                          {isChild && swipePercentage > 0.2 && (
-                            <div className="absolute inset-0 flex items-center justify-end bg-red-600 px-6">
+                          {/* Delete button background (always rendered, controlled by opacity) */}
+                          {isChild && (
+                            <div
+                              className="absolute inset-0 flex items-center justify-end bg-red-600 px-6 transition-opacity"
+                              style={{
+                                opacity: swipePercentage > 0.15 ? 1 : 0,
+                              }}
+                            >
                               <span className="text-white font-medium">Delete</span>
                             </div>
                           )}
 
                           {/* Main card content */}
                           <div
-                            className={`border-b p-4 last:border-b-0 ${isParent ? "bg-muted/30" : "bg-background"} ${isChild ? "pl-8" : ""} transition-transform`}
+                            className={`border-b p-4 last:border-b-0 ${isParent ? "bg-muted/30" : "bg-background"} ${isChild ? "pl-8" : ""}`}
                             style={{
                               transform: isChild ? `translateX(-${swipeOffset}px)` : undefined,
+                              transition: swipeState.isDragging ? 'none' : 'transform 0.2s ease-out',
                             }}
                             onTouchStart={isChild ? (e) => handleTouchStart(e, item.id) : undefined}
                             onTouchMove={isChild ? handleTouchMove : undefined}
