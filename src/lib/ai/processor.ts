@@ -6,6 +6,7 @@ import {
 import { ServiceCatalogItem } from "@prisma/client";
 
 export interface LineItem {
+  id?: string; // Present when loaded from database
   description: string;
   catalogItemId?: string;
   category?: string;
