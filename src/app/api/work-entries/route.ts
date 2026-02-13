@@ -162,11 +162,19 @@ export async function POST(req: NextRequest) {
     id: item.id,
     description: item.description,
     total: item.total,
+    parentId: item.parentId,
     estimateLineItemId: item.estimateLineItemId
   })));
 
+  // Sum only child items (items with parentId) to avoid counting parent headers
+  // Parent headers are created with $0 total, but let's be explicit
   const subtotal = allLineItems.reduce((sum, item) => {
-    console.log(`[Work Entry] Adding item total: ${item.total}, running sum: ${sum + Number(item.total)}`);
+    // Skip parent items (items without parentId are grouping headers)
+    if (!item.parentId) {
+      console.log(`[Work Entry] Skipping parent item: ${item.description}`);
+      return sum;
+    }
+    console.log(`[Work Entry] Adding child item total: ${item.total}, running sum: ${sum + Number(item.total)}`);
     return sum + Number(item.total);
   }, 0);
 

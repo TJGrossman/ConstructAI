@@ -37,9 +37,13 @@ export function calculateInvoiceTotals(
   lineItems: LineItem[],
   taxRate: number
 ) {
-  // Sum only root-level items (items without a parentId)
-  const rootItems = lineItems.filter((item) => !item.parentId);
-  const subtotal = rootItems.reduce((sum, item) => sum + item.total, 0);
+  // Sum all items except parent headers (which have isParent=true and $0 total)
+  const subtotal = lineItems.reduce((sum, item) => {
+    // Skip parent items (grouping headers with no cost)
+    if (item.isParent) return sum;
+    return sum + item.total;
+  }, 0);
+
   const taxAmount = Math.round(subtotal * (taxRate / 100) * 100) / 100;
   const total = Math.round((subtotal + taxAmount) * 100) / 100;
 
