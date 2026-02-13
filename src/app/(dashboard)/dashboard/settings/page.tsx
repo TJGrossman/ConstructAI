@@ -111,7 +111,7 @@ export default function SettingsPage() {
       const data = await res.json();
       if (data.items) {
         // Merge AI results with existing IDs
-        const updatedItems = data.items.map((aiItem: any, idx: number) => {
+        const updatedItems = data.items.map((aiItem: { name: string; category: string; unit: string; defaultRate: number }, idx: number) => {
           const existingItem = catalogItems[idx];
           return existingItem
             ? { ...existingItem, ...aiItem, defaultRate: aiItem.defaultRate.toString() }
