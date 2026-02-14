@@ -502,6 +502,30 @@ export default function ProjectDetailPage() {
 
       {/* Content */}
       <div className="min-h-0 flex-1">
+        {/* Mobile history filters - show above all content when on history tab */}
+        {activeTab === "history" && isMobile && (
+          <div className="mb-4 flex gap-2 overflow-x-auto rounded-lg border bg-muted p-1">
+            {[
+              { key: "all" as const, label: "Timeline" },
+              { key: "estimates" as const, label: "Estimates" },
+              { key: "change-orders" as const, label: "Change Orders" },
+              { key: "invoices" as const, label: "Invoices" },
+            ].map((filter) => (
+              <button
+                key={filter.key}
+                onClick={() => setHistoryFilter(filter.key)}
+                className={`whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  historyFilter === filter.key
+                    ? "bg-background shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {activeTab === "status" && (
           <ReconciliationView projectId={projectId} />
         )}
@@ -1500,37 +1524,9 @@ export default function ProjectDetailPage() {
           </div>
         )}
 
-        {activeTab === "history" && (
-          <>
-            {/* History filters (mobile only) */}
-            {isMobile && (
-              <div className="mb-4 flex gap-2 overflow-x-auto pb-2">
-                {[
-                  { key: "all" as const, label: "Timeline" },
-                  { key: "estimates" as const, label: "Estimates" },
-                  { key: "change-orders" as const, label: "Change Orders" },
-                  { key: "invoices" as const, label: "Invoices" },
-                ].map((filter) => (
-                  <button
-                    key={filter.key}
-                    onClick={() => setHistoryFilter(filter.key)}
-                    className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                      historyFilter === filter.key
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
-                    }`}
-                  >
-                    {filter.label}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Timeline view (when "all" filter is selected on mobile, or always on desktop) */}
-            {(!isMobile || historyFilter === "all") && (
-              <HistoryTab projectId={projectId} filter="all" />
-            )}
-          </>
+        {/* Timeline view - shown when history tab active and (desktop OR mobile with "all" filter) */}
+        {activeTab === "history" && (!isMobile || historyFilter === "all") && (
+          <HistoryTab projectId={projectId} filter="all" />
         )}
       </div>
     </div>
