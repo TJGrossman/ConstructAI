@@ -133,16 +133,25 @@ export async function GET(
   });
 
   project.invoices.forEach((invoice) => {
+    // Calculate proportional tax factor for this invoice
+    // (invoice total includes tax, line items don't)
+    const invoiceSubtotal = Number(invoice.subtotal);
+    const invoiceTotal = Number(invoice.total);
+    const taxFactor = invoiceSubtotal > 0 ? invoiceTotal / invoiceSubtotal : 1;
+
     invoice.lineItems.forEach((item) => {
       if (item.estimateLineItemId) {
         const reconItem = lineItemMap.get(item.estimateLineItemId);
         if (reconItem) {
-          const amount = Number(item.total);
-          reconItem.invoicedCost += amount;
+          // Apply proportional tax to line item amount
+          const lineItemAmount = Number(item.total);
+          const amountWithTax = Math.round(lineItemAmount * taxFactor * 100) / 100;
+
+          reconItem.invoicedCost += amountWithTax;
           reconItem.invoices.push({
             number: invoice.number,
             status: invoice.status,
-            amount,
+            amount: amountWithTax,
           });
         }
       }
