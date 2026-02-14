@@ -517,7 +517,7 @@ export default function ProjectDetailPage() {
           </div>
         )}
 
-        {activeTab === "estimates" && (
+        {(activeTab === "estimates" || (activeTab === "history" && isMobile && historyFilter === "estimates")) && (
           <div className="space-y-4">
             {project.estimates.length === 0 ? (
               <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground">
@@ -937,7 +937,7 @@ export default function ProjectDetailPage() {
           </div>
         )}
 
-        {activeTab === "change-orders" && (
+        {(activeTab === "change-orders" || (activeTab === "history" && isMobile && historyFilter === "change-orders")) && (
           <div className="space-y-4">
             {project.changeOrders.length === 0 ? (
               <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground">
@@ -1081,7 +1081,7 @@ export default function ProjectDetailPage() {
           </div>
         )}
 
-        {activeTab === "invoices" && (
+        {(activeTab === "invoices" || (activeTab === "history" && isMobile && historyFilter === "invoices")) && (
           <div className="space-y-4">
             {project.invoices.length === 0 ? (
               <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground">
@@ -1501,12 +1501,12 @@ export default function ProjectDetailPage() {
         )}
 
         {activeTab === "history" && (
-          <div className="space-y-4">
+          <>
             {/* History filters (mobile only) */}
             {isMobile && (
-              <div className="flex gap-2 overflow-x-auto pb-2">
+              <div className="mb-4 flex gap-2 overflow-x-auto pb-2">
                 {[
-                  { key: "all" as const, label: "All" },
+                  { key: "all" as const, label: "Timeline" },
                   { key: "estimates" as const, label: "Estimates" },
                   { key: "change-orders" as const, label: "Change Orders" },
                   { key: "invoices" as const, label: "Invoices" },
@@ -1525,8 +1525,12 @@ export default function ProjectDetailPage() {
                 ))}
               </div>
             )}
-            <HistoryTab projectId={projectId} filter={isMobile ? historyFilter : "all"} />
-          </div>
+
+            {/* Timeline view (when "all" filter is selected on mobile, or always on desktop) */}
+            {(!isMobile || historyFilter === "all") && (
+              <HistoryTab projectId={projectId} filter="all" />
+            )}
+          </>
         )}
       </div>
     </div>
