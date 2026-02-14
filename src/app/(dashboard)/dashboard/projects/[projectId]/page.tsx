@@ -241,10 +241,10 @@ export default function ProjectDetailPage() {
     handleNavigateToItem("invoice", invoice.id);
   };
 
-  const handleReceiptUploadComplete = (receiptId: string, description: string) => {
+  const handleReceiptUploadComplete = (_receiptId: string, _description: string) => {
     setShowReceiptUpload(false);
     fetchProject(); // Refresh to show new receipt
-    // TODO: Later we can show WorkEntryPreview for AI mapping
+    // TODO: Later we can show WorkEntryPreview for AI mapping with receiptId and description
   };
 
   const toggleParent = (parentId: string) => {
