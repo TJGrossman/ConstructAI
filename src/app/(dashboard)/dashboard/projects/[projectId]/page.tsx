@@ -1625,6 +1625,39 @@ function HistoryTab({
     return true;
   });
 
+  // Format timeline event message
+  const getEventMessage = (log: typeof logs[0]) => {
+    const details = log.details || {};
+
+    if (log.action === "estimate_created") {
+      return `Estimate #${details.estimateNumber} created`;
+    }
+
+    if (log.action === "estimate_updated") {
+      const changeOrderPart = details.changeOrderNumber
+        ? ` by Change Order #${details.changeOrderNumber}`
+        : "";
+      return `Estimate #${details.estimateNumber} updated to v${details.versionNumber}${changeOrderPart}`;
+    }
+
+    // Default formatting for other actions
+    return log.action.replace(/_/g, " ");
+  };
+
+  const getEventSubtext = (log: typeof logs[0]) => {
+    const details = log.details || {};
+
+    if (log.action === "estimate_updated" && details.changeOrderTitle) {
+      return `${details.changeOrderTitle} — ${formatDate(log.createdAt)}`;
+    }
+
+    if (log.action === "estimate_created" || log.action === "estimate_updated") {
+      return `${details.estimateTitle || ""} — ${formatDate(log.createdAt)}`;
+    }
+
+    return `${log.entityType} — ${formatDate(log.createdAt)}`;
+  };
+
   if (loading) {
     return (
       <div className="flex h-32 items-center justify-center">
@@ -1652,10 +1685,10 @@ function HistoryTab({
           <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
           <div className="flex-1">
             <p className="text-sm font-medium">
-              {log.action.replace(/_/g, " ")}
+              {getEventMessage(log)}
             </p>
             <p className="text-xs text-muted-foreground">
-              {log.entityType} — {formatDate(log.createdAt)}
+              {getEventSubtext(log)}
             </p>
           </div>
         </div>
