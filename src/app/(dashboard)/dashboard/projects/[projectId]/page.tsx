@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, ChevronDown, ChevronRight, Pencil, Plus, Save, X, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, ChevronDown, ChevronRight, Pencil, Plus, Save, X, Trash2, Camera } from "lucide-react";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { ReconciliationView } from "@/components/project/ReconciliationView";
+import { ReceiptUpload } from "@/components/work/ReceiptUpload";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 interface LineItem {
@@ -119,6 +120,7 @@ export default function ProjectDetailPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
+  const [showReceiptUpload, setShowReceiptUpload] = useState(false);
 
   const fetchProject = useCallback(async () => {
     try {
@@ -237,6 +239,12 @@ export default function ProjectDetailPage() {
 
     // Use the existing navigation handler
     handleNavigateToItem("invoice", invoice.id);
+  };
+
+  const handleReceiptUploadComplete = (receiptId: string, description: string) => {
+    setShowReceiptUpload(false);
+    fetchProject(); // Refresh to show new receipt
+    // TODO: Later we can show WorkEntryPreview for AI mapping
   };
 
   const toggleParent = (parentId: string) => {
@@ -571,7 +579,32 @@ export default function ProjectDetailPage() {
         )}
 
         {activeTab === "status" && (
-          <ReconciliationView projectId={projectId} onNavigateToInvoice={handleNavigateToInvoice} />
+          <div className="space-y-4">
+            {/* Upload Receipt Button */}
+            {!showReceiptUpload && (
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setShowReceiptUpload(true)}
+                  className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                >
+                  <Camera className="h-4 w-4" />
+                  Upload Receipt
+                </button>
+              </div>
+            )}
+
+            {/* Receipt Upload Component */}
+            {showReceiptUpload && (
+              <ReceiptUpload
+                projectId={projectId}
+                onUploadComplete={handleReceiptUploadComplete}
+                onCancel={() => setShowReceiptUpload(false)}
+              />
+            )}
+
+            {/* Budget Overview */}
+            <ReconciliationView projectId={projectId} onNavigateToInvoice={handleNavigateToInvoice} />
+          </div>
         )}
 
         {activeTab === "chat" && (

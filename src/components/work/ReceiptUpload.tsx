@@ -130,6 +130,7 @@ export function ReceiptUpload({
           id="receipt-file"
           type="file"
           accept="image/jpeg,image/png,image/jpg,application/pdf"
+          capture="environment"
           onChange={handleFileChange}
           className="hidden"
         />
