@@ -117,6 +117,7 @@ export default function ProjectDetailPage() {
   const [editingDocument, setEditingDocument] = useState<{ type: 'estimate' | 'invoice', id: string } | null>(null);
   const [editedLineItems, setEditedLineItems] = useState<LineItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const fetchProject = useCallback(async () => {
     try {
@@ -173,6 +174,26 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     fetchProject();
   }, [fetchProject]);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+
+      // If switching to mobile and current tab isn't available, switch to history
+      if (mobile && activeTab !== "status" && activeTab !== "chat" && activeTab !== "history") {
+        setActiveTab("history");
+        // Auto-select appropriate filter based on previous tab
+        if (activeTab === "estimates") setHistoryFilter("estimates");
+        else if (activeTab === "change-orders") setHistoryFilter("change-orders");
+        else if (activeTab === "invoices") setHistoryFilter("invoices");
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, [activeTab]);
 
   const toggleParent = (parentId: string) => {
     setExpandedParents((prev) => {
@@ -430,28 +451,6 @@ export default function ProjectDetailPage() {
     { key: "chat", label: "Chat" },
     { key: "history", label: "History" },
   ];
-
-  // Use mobile tabs on screens < 1024px, desktop tabs otherwise
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth < 1024;
-      setIsMobile(mobile);
-
-      // If switching to mobile and current tab isn't available, switch to history
-      if (mobile && !mobileTabs.some(tab => tab.key === activeTab)) {
-        setActiveTab("history");
-        // Auto-select appropriate filter based on previous tab
-        if (activeTab === "estimates") setHistoryFilter("estimates");
-        else if (activeTab === "change-orders") setHistoryFilter("change-orders");
-        else if (activeTab === "invoices") setHistoryFilter("invoices");
-      }
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, [activeTab]);
 
   const tabs = isMobile ? mobileTabs : allTabs;
 
