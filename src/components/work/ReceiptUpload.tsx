@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Upload, Mic, MicOff } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Upload, Mic, MicOff, Camera } from "lucide-react";
 import { useVoiceRecording } from "@/hooks/useVoiceRecording";
 
 interface ReceiptUploadProps {
@@ -19,6 +19,17 @@ export function ReceiptUpload({
   const [description, setDescription] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Detect mobile device
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const {
     isRecording,
@@ -118,11 +129,23 @@ export function ReceiptUpload({
             </div>
           ) : (
             <>
-              <Upload className="mb-2 h-8 w-8 text-muted-foreground" />
-              <p className="text-sm font-medium">Click to upload</p>
-              <p className="text-xs text-muted-foreground">
-                JPG, PNG, or PDF (max 10MB)
-              </p>
+              {isMobile ? (
+                <>
+                  <Camera className="mb-2 h-10 w-10 text-primary" />
+                  <p className="text-base font-medium">Tap to capture receipt</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Camera will open automatically
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Upload className="mb-2 h-8 w-8 text-muted-foreground" />
+                  <p className="text-sm font-medium">Click to upload</p>
+                  <p className="text-xs text-muted-foreground">
+                    JPG, PNG, or PDF (max 10MB)
+                  </p>
+                </>
+              )}
             </>
           )}
         </label>
