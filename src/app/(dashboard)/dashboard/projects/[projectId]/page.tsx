@@ -92,6 +92,7 @@ const statusColors: Record<string, string> = {
 };
 
 type Tab = "status" | "chat" | "estimates" | "change-orders" | "invoices" | "history";
+type HistoryFilter = "all" | "estimates" | "change-orders" | "invoices";
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -99,6 +100,7 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("status");
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("all");
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
   const [swipeState, setSwipeState] = useState<{
     itemId: string | null;
@@ -411,7 +413,9 @@ export default function ProjectDetailPage() {
   }
 
   const conversation = project.conversations[0];
-  const tabs: { key: Tab; label: string; count?: number }[] = [
+
+  // Desktop: all 6 tabs
+  const allTabs: { key: Tab; label: string; count?: number }[] = [
     { key: "status", label: "Status" },
     { key: "chat", label: "Chat" },
     { key: "estimates", label: "Estimates", count: project.estimates.length },
@@ -419,6 +423,37 @@ export default function ProjectDetailPage() {
     { key: "invoices", label: "Invoices", count: project.invoices.length },
     { key: "history", label: "History" },
   ];
+
+  // Mobile: simplified 3 tabs (estimates/change orders/invoices accessible via history filters)
+  const mobileTabs: { key: Tab; label: string; count?: number }[] = [
+    { key: "status", label: "Status" },
+    { key: "chat", label: "Chat" },
+    { key: "history", label: "History" },
+  ];
+
+  // Use mobile tabs on screens < 1024px, desktop tabs otherwise
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+
+      // If switching to mobile and current tab isn't available, switch to history
+      if (mobile && !mobileTabs.some(tab => tab.key === activeTab)) {
+        setActiveTab("history");
+        // Auto-select appropriate filter based on previous tab
+        if (activeTab === "estimates") setHistoryFilter("estimates");
+        else if (activeTab === "change-orders") setHistoryFilter("change-orders");
+        else if (activeTab === "invoices") setHistoryFilter("invoices");
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, [activeTab]);
+
+  const tabs = isMobile ? mobileTabs : allTabs;
 
   return (
     <div className="flex h-full flex-col">
@@ -1467,14 +1502,39 @@ export default function ProjectDetailPage() {
         )}
 
         {activeTab === "history" && (
-          <HistoryTab projectId={projectId} />
+          <div className="space-y-4">
+            {/* History filters (mobile only) */}
+            {isMobile && (
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {[
+                  { key: "all" as const, label: "All" },
+                  { key: "estimates" as const, label: "Estimates" },
+                  { key: "change-orders" as const, label: "Change Orders" },
+                  { key: "invoices" as const, label: "Invoices" },
+                ].map((filter) => (
+                  <button
+                    key={filter.key}
+                    onClick={() => setHistoryFilter(filter.key)}
+                    className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                      historyFilter === filter.key
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            <HistoryTab projectId={projectId} filter={isMobile ? historyFilter : "all"} />
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-function HistoryTab({ projectId }: { projectId: string }) {
+function HistoryTab({ projectId, filter }: { projectId: string; filter: HistoryFilter }) {
   const [logs, setLogs] = useState<
     { id: string; action: string; entityType: string; createdAt: string; details: Record<string, unknown> | null }[]
   >([]);
@@ -1487,6 +1547,15 @@ function HistoryTab({ projectId }: { projectId: string }) {
       .finally(() => setLoading(false));
   }, [projectId]);
 
+  // Filter logs based on selected filter
+  const filteredLogs = logs.filter((log) => {
+    if (filter === "all") return true;
+    if (filter === "estimates") return log.entityType === "estimate";
+    if (filter === "change-orders") return log.entityType === "change_order";
+    if (filter === "invoices") return log.entityType === "invoice";
+    return true;
+  });
+
   if (loading) {
     return (
       <div className="flex h-32 items-center justify-center">
@@ -1495,17 +1564,17 @@ function HistoryTab({ projectId }: { projectId: string }) {
     );
   }
 
-  if (logs.length === 0) {
+  if (filteredLogs.length === 0) {
     return (
       <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground">
-        No history yet.
+        {filter === "all" ? "No history yet." : `No ${filter.replace("-", " ")} found.`}
       </div>
     );
   }
 
   return (
     <div className="space-y-2">
-      {logs.map((log) => (
+      {filteredLogs.map((log) => (
         <div key={log.id} className="flex items-start gap-3 rounded-lg border bg-card p-3">
           <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
           <div className="flex-1">
