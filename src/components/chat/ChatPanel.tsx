@@ -89,6 +89,7 @@ export function ChatPanel({
           projectId,
           message: content,
           conversationId: conversationId || undefined,
+          pendingDraft: pendingStructured || undefined, // Include draft for modifications
         }),
       });
 

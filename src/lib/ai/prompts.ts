@@ -18,7 +18,14 @@ ${description}`;
 
 export function buildProcessingSystemPrompt(
   catalogItems: ServiceCatalogItem[],
-  projectContext: string
+  projectContext: string,
+  pendingDraft?: {
+    type: string;
+    title?: string;
+    lineItems?: unknown[];
+    workEntries?: unknown[];
+    notes?: string;
+  }
 ): string {
   const catalogStr = catalogItems
     .map(
@@ -27,13 +34,36 @@ export function buildProcessingSystemPrompt(
     )
     .join("\n");
 
+  const draftContext = pendingDraft
+    ? `\n\n## PENDING DRAFT (User is modifying this, DO NOT create a new one!)
+**Type**: ${pendingDraft.type}
+**Title**: ${pendingDraft.title || "Untitled"}
+**Current structure**: ${JSON.stringify(pendingDraft, null, 2)}
+
+IMPORTANT: The user has a draft in progress. If their message is a modification request (e.g., "separate bathrooms into sections", "change the rate", "add X", "remove Y"), MODIFY the existing draft structure above. Return the UPDATED full structure with the same type, don't create a new document.
+
+Examples of modification requests:
+- "Separate the two bathrooms into their own sections"
+- "Change the labor rate to $85/hr"
+- "Add tile installation"
+- "Remove the painting line"
+- "That looks good but split kitchen into countertops and cabinets"
+
+When modifying:
+1. Parse what they want to change
+2. Apply the changes to the existing lineItems/workEntries
+3. Return the full updated structure with intent "${pendingDraft.type.replace('_', '_')}"
+4. Keep the same title unless they explicitly want to change it
+`
+    : "";
+
   return `You are ConstructAI, an AI assistant for a contractor. You help create estimates, change orders, invoices, and track work from natural language descriptions.
 
 ## Contractor's Service Catalog
 ${catalogStr || "No catalog items yet."}
 
 ## Project Context
-${projectContext}
+${projectContext}${draftContext}
 
 ## Instructions
 1. Analyze the contractor's message to determine intent:

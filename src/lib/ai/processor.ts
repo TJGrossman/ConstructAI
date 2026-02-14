@@ -70,11 +70,19 @@ export async function processMessage(
   userMessage: string,
   catalogItems: ServiceCatalogItem[],
   projectContext: string,
-  conversationHistory: { role: string; content: string }[]
+  conversationHistory: { role: string; content: string }[],
+  pendingDraft?: {
+    type: "estimate" | "change_order" | "invoice" | "work_entry";
+    title?: string;
+    lineItems?: LineItem[];
+    workEntries?: WorkEntryItem[];
+    notes?: string;
+  }
 ): Promise<AIProcessingResult> {
   const systemPrompt = buildProcessingSystemPrompt(
     catalogItems,
-    projectContext
+    projectContext,
+    pendingDraft
   );
 
   const messages = [

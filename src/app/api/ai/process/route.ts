@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = (session.user as { id: string }).id;
-  const { projectId, message, conversationId } = await req.json();
+  const { projectId, message, conversationId, pendingDraft } = await req.json();
 
   if (!projectId || !message) {
     return NextResponse.json(
@@ -124,7 +124,8 @@ IMPORTANT: When recording work entries, match the work to existing estimate line
     message,
     catalogItems,
     projectContext,
-    history
+    history,
+    pendingDraft
   );
 
   // Save assistant message
