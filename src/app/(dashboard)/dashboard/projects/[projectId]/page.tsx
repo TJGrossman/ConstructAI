@@ -118,6 +118,7 @@ export default function ProjectDetailPage() {
   const [editedLineItems, setEditedLineItems] = useState<LineItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
 
   const fetchProject = useCallback(async () => {
     try {
@@ -194,6 +195,48 @@ export default function ProjectDetailPage() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, [activeTab]);
+
+  // Navigate to a specific item from timeline
+  const handleNavigateToItem = (entityType: string, entityId: string) => {
+    // Map entity types to tabs
+    let targetTab: Tab = "history";
+    if (entityType === "estimate") targetTab = "estimates";
+    else if (entityType === "change_order") targetTab = "change-orders";
+    else if (entityType === "invoice") targetTab = "invoices";
+
+    // Switch to the appropriate tab
+    setActiveTab(targetTab);
+    if (isMobile && targetTab !== "status" && targetTab !== "chat") {
+      setActiveTab("history");
+      if (targetTab === "estimates") setHistoryFilter("estimates");
+      else if (targetTab === "change-orders") setHistoryFilter("change-orders");
+      else if (targetTab === "invoices") setHistoryFilter("invoices");
+    }
+
+    // Highlight the item
+    setHighlightedItemId(entityId);
+
+    // Scroll to the item after a short delay (to allow tab switch)
+    setTimeout(() => {
+      const element = document.getElementById(`item-${entityId}`);
+      element?.scrollIntoView({ behavior: "smooth", block: "center" });
+
+      // Clear highlight after 3 seconds
+      setTimeout(() => setHighlightedItemId(null), 3000);
+    }, 100);
+  };
+
+  // Navigate to invoice by number
+  const handleNavigateToInvoice = (invoiceNumber: number) => {
+    if (!project) return;
+
+    // Find the invoice by number
+    const invoice = project.invoices.find((inv) => inv.number === invoiceNumber);
+    if (!invoice) return;
+
+    // Use the existing navigation handler
+    handleNavigateToItem("invoice", invoice.id);
+  };
 
   const toggleParent = (parentId: string) => {
     setExpandedParents((prev) => {
@@ -527,7 +570,7 @@ export default function ProjectDetailPage() {
         )}
 
         {activeTab === "status" && (
-          <ReconciliationView projectId={projectId} />
+          <ReconciliationView projectId={projectId} onNavigateToInvoice={handleNavigateToInvoice} />
         )}
 
         {activeTab === "chat" && (
@@ -553,7 +596,13 @@ export default function ProjectDetailPage() {
                 const displayItems = isEditing ? editedLineItems : est.lineItems;
 
                 return (
-                <div key={est.id} className="rounded-lg border bg-card">
+                <div
+                  key={est.id}
+                  id={`item-${est.id}`}
+                  className={`rounded-lg border bg-card transition-all ${
+                    highlightedItemId === est.id ? "ring-2 ring-primary shadow-lg" : ""
+                  }`}
+                >
                   <div className="flex items-center justify-between border-b p-4">
                     <div>
                       <h3 className="font-semibold">
@@ -969,7 +1018,13 @@ export default function ProjectDetailPage() {
               </div>
             ) : (
               project.changeOrders.map((co) => (
-                <div key={co.id} className="rounded-lg border bg-card">
+                <div
+                  key={co.id}
+                  id={`item-${co.id}`}
+                  className={`rounded-lg border bg-card transition-all ${
+                    highlightedItemId === co.id ? "ring-2 ring-primary shadow-lg" : ""
+                  }`}
+                >
                   <div className="flex items-center justify-between border-b p-4">
                     <div>
                       <h3 className="font-semibold">
@@ -1117,7 +1172,13 @@ export default function ProjectDetailPage() {
                 const displayItems = isEditing ? editedLineItems : inv.lineItems;
 
                 return (
-                <div key={inv.id} className="rounded-lg border bg-card">
+                <div
+                  key={inv.id}
+                  id={`item-${inv.id}`}
+                  className={`rounded-lg border bg-card transition-all ${
+                    highlightedItemId === inv.id ? "ring-2 ring-primary shadow-lg" : ""
+                  }`}
+                >
                   <div className="flex items-center justify-between border-b p-4">
                     <div>
                       <h3 className="font-semibold">Invoice #{inv.number}</h3>
@@ -1526,16 +1587,24 @@ export default function ProjectDetailPage() {
 
         {/* Timeline view - shown when history tab active and (desktop OR mobile with "all" filter) */}
         {activeTab === "history" && (!isMobile || historyFilter === "all") && (
-          <HistoryTab projectId={projectId} filter="all" />
+          <HistoryTab projectId={projectId} filter="all" onNavigateToItem={handleNavigateToItem} />
         )}
       </div>
     </div>
   );
 }
 
-function HistoryTab({ projectId, filter }: { projectId: string; filter: HistoryFilter }) {
+function HistoryTab({
+  projectId,
+  filter,
+  onNavigateToItem
+}: {
+  projectId: string;
+  filter: HistoryFilter;
+  onNavigateToItem?: (entityType: string, entityId: string) => void;
+}) {
   const [logs, setLogs] = useState<
-    { id: string; action: string; entityType: string; createdAt: string; details: Record<string, unknown> | null }[]
+    { id: string; action: string; entityType: string; entityId: string; createdAt: string; details: Record<string, unknown> | null }[]
   >([]);
   const [loading, setLoading] = useState(true);
 
@@ -1574,7 +1643,11 @@ function HistoryTab({ projectId, filter }: { projectId: string; filter: HistoryF
   return (
     <div className="space-y-2">
       {filteredLogs.map((log) => (
-        <div key={log.id} className="flex items-start gap-3 rounded-lg border bg-card p-3">
+        <div
+          key={log.id}
+          onClick={() => onNavigateToItem?.(log.entityType, log.entityId)}
+          className="flex items-start gap-3 rounded-lg border bg-card p-3 cursor-pointer hover:bg-accent transition-colors"
+        >
           <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
           <div className="flex-1">
             <p className="text-sm font-medium">

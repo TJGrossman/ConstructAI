@@ -40,7 +40,7 @@ export function ChatPanel({
   );
   const [isLoading, setIsLoading] = useState(false);
   const [pendingStructured, setPendingStructured] = useState<{
-    type: "estimate" | "change_order" | "invoice" | "work_entry";
+    type: "estimate" | "change_order" | "invoice" | "work_entry" | "project";
     title?: string;
     lineItems?: Array<{
       description: string;
@@ -64,6 +64,13 @@ export function ChatPanel({
       notes?: string;
     }>;
     notes?: string;
+    // Project fields
+    projectName?: string;
+    customerName?: string;
+    address?: string;
+    description?: string;
+    customerEmail?: string;
+    customerPhone?: string;
   } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -134,7 +141,19 @@ export function ChatPanel({
       let endpoint = "";
       let body: Record<string, unknown> = {};
 
-      if (pendingStructured.type === "estimate") {
+      if (pendingStructured.type === "project") {
+        endpoint = "/api/projects";
+        // Parse project data from notes parameter
+        const projectData = JSON.parse(notes);
+        body = {
+          name: projectData.projectName,
+          customerName: projectData.customerName,
+          address: projectData.address || undefined,
+          description: projectData.description || undefined,
+          customerEmail: projectData.customerEmail || undefined,
+          customerPhone: projectData.customerPhone || undefined,
+        };
+      } else if (pendingStructured.type === "estimate") {
         endpoint = "/api/estimates";
         body = { projectId, title, lineItems, notes };
       } else if (pendingStructured.type === "change_order") {
@@ -174,7 +193,9 @@ export function ChatPanel({
           role: "assistant",
           content: pendingStructured.type === "work_entry"
             ? `Work recorded successfully! Added to ${data.status === "draft" ? "draft " : ""}Invoice #${data.number}.`
-            : `${pendingStructured.type === "change_order" ? "Change order" : pendingStructured.type.charAt(0).toUpperCase() + pendingStructured.type.slice(1)} "${title}" has been created successfully.`,
+            : pendingStructured.type === "project"
+              ? `Project "${data.name}" has been created successfully! You can now create estimates and track work for this project.`
+              : `${pendingStructured.type === "change_order" ? "Change order" : pendingStructured.type.charAt(0).toUpperCase() + pendingStructured.type.slice(1)} "${title}" has been created successfully.`,
           createdAt: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, confirmMessage]);
@@ -229,6 +250,12 @@ export function ChatPanel({
               lineItems={pendingStructured.lineItems}
               workEntries={pendingStructured.workEntries}
               notes={pendingStructured.notes}
+              projectName={pendingStructured.projectName}
+              customerName={pendingStructured.customerName}
+              address={pendingStructured.address}
+              description={pendingStructured.description}
+              customerEmail={pendingStructured.customerEmail}
+              customerPhone={pendingStructured.customerPhone}
               onApprove={handleApprove}
               onReject={handleReject}
             />

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { ProgressBar } from "@/components/ui/ProgressBar";
 
 interface ReconciliationLineItem {
   id: string;
@@ -46,9 +47,10 @@ interface ReconciliationData {
 
 interface ReconciliationViewProps {
   projectId: string;
+  onNavigateToInvoice?: (invoiceNumber: number) => void;
 }
 
-export function ReconciliationView({ projectId }: ReconciliationViewProps) {
+export function ReconciliationView({ projectId, onNavigateToInvoice }: ReconciliationViewProps) {
   const [data, setData] = useState<ReconciliationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
@@ -145,33 +147,65 @@ export function ReconciliationView({ projectId }: ReconciliationViewProps) {
             <p className="text-2xl font-bold">{formatCurrency(data.estimatedCost)}</p>
           </div>
         </div>
-        <div className="grid gap-4 border-t p-4 md:grid-cols-4">
-          <div>
-            <p className="text-sm text-muted-foreground">Invoiced</p>
-            <p className="text-xl font-semibold">{formatCurrency(data.invoicedTotal)}</p>
+
+        {/* Budget Utilization Progress Bar */}
+        <div className="px-4 pb-4">
+          <ProgressBar
+            value={data.invoicedTotal}
+            max={data.estimatedCost}
+            label="Budget Utilized"
+            height="lg"
+          />
+        </div>
+        <div className="border-t p-4 space-y-4">
+          <div className="grid gap-4 md:grid-cols-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Invoiced</p>
+              <p className="text-xl font-semibold">{formatCurrency(data.invoicedTotal)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Paid</p>
+              <p className="text-xl font-semibold text-green-600">{formatCurrency(data.paidTotal)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Unpaid</p>
+              <p className="text-xl font-semibold text-red-600">{formatCurrency(data.unpaidTotal)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Remaining Budget</p>
+              <p className={`text-xl font-semibold ${data.remainingBudget < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                {formatCurrency(data.remainingBudget)}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Paid</p>
-            <p className="text-xl font-semibold text-green-600">{formatCurrency(data.paidTotal)}</p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Unpaid</p>
-            <p className="text-xl font-semibold text-red-600">{formatCurrency(data.unpaidTotal)}</p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Remaining Budget</p>
-            <p className={`text-xl font-semibold ${data.remainingBudget < 0 ? 'text-red-600' : 'text-green-600'}`}>
-              {formatCurrency(data.remainingBudget)}
-            </p>
-          </div>
+
+          {/* Payment Progress Bar */}
+          {data.invoicedTotal > 0 && (
+            <ProgressBar
+              value={data.paidTotal}
+              max={data.invoicedTotal}
+              label="Payment Progress"
+              variant="success"
+              height="md"
+            />
+          )}
         </div>
         {data.maxBudget && (
-          <div className={`border-t p-4 ${overMaxBudget ? 'bg-red-50' : nearingMaxBudget ? 'bg-yellow-50' : ''}`}>
-            <p className="text-sm">
-              <span className="font-medium">Max Budget:</span> {formatCurrency(data.maxBudget)}
-              {overMaxBudget && <span className="ml-2 text-red-600 font-semibold">⚠️ OVER BUDGET - Conversation Needed</span>}
-              {nearingMaxBudget && !overMaxBudget && <span className="ml-2 text-yellow-600 font-semibold">⚠️ Approaching Limit</span>}
-            </p>
+          <div className={`border-t p-4 space-y-3 ${overMaxBudget ? 'bg-red-50 dark:bg-red-950/20' : nearingMaxBudget ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}`}>
+            <div>
+              <p className="text-sm">
+                <span className="font-medium">Max Budget:</span> {formatCurrency(data.maxBudget)}
+                {overMaxBudget && <span className="ml-2 text-red-600 font-semibold">⚠️ OVER BUDGET - Conversation Needed</span>}
+                {nearingMaxBudget && !overMaxBudget && <span className="ml-2 text-yellow-600 font-semibold">⚠️ Approaching Limit</span>}
+              </p>
+            </div>
+            <ProgressBar
+              value={data.invoicedTotal}
+              max={data.maxBudget}
+              label={`${formatCurrency(data.invoicedTotal)} of ${formatCurrency(data.maxBudget)} max`}
+              variant={overMaxBudget ? 'danger' : nearingMaxBudget ? 'warning' : 'success'}
+              height="md"
+            />
           </div>
         )}
       </div>
@@ -225,16 +259,17 @@ export function ReconciliationView({ projectId }: ReconciliationViewProps) {
                       {item.invoices.length > 0 && (
                         <div className="flex flex-wrap gap-1">
                           {item.invoices.map((inv, idx) => (
-                            <span
+                            <button
                               key={idx}
-                              className={`rounded px-1.5 py-0.5 text-xs ${
+                              onClick={() => onNavigateToInvoice?.(inv.number)}
+                              className={`rounded px-1.5 py-0.5 text-xs hover:opacity-80 transition-opacity cursor-pointer ${
                                 inv.status === 'paid'
                                   ? 'bg-green-100 text-green-700'
                                   : 'bg-red-100 text-red-700'
                               }`}
                             >
                               #{inv.number}
-                            </span>
+                            </button>
                           ))}
                         </div>
                       )}
@@ -269,16 +304,17 @@ export function ReconciliationView({ projectId }: ReconciliationViewProps) {
                         {child.invoices.length > 0 && (
                           <div className="flex flex-wrap gap-1">
                             {child.invoices.map((inv, idx) => (
-                              <span
+                              <button
                                 key={idx}
-                                className={`rounded px-1.5 py-0.5 text-xs ${
+                                onClick={() => onNavigateToInvoice?.(inv.number)}
+                                className={`rounded px-1.5 py-0.5 text-xs hover:opacity-80 transition-opacity cursor-pointer ${
                                   inv.status === 'paid'
                                     ? 'bg-green-100 text-green-700'
                                     : 'bg-red-100 text-red-700'
                                 }`}
                               >
                                 #{inv.number}
-                              </span>
+                              </button>
                             ))}
                           </div>
                         )}
@@ -332,16 +368,17 @@ export function ReconciliationView({ projectId }: ReconciliationViewProps) {
                   {item.invoices.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {item.invoices.map((inv, idx) => (
-                        <span
+                        <button
                           key={idx}
-                          className={`rounded px-1.5 py-0.5 text-xs ${
+                          onClick={() => onNavigateToInvoice?.(inv.number)}
+                          className={`rounded px-1.5 py-0.5 text-xs hover:opacity-80 transition-opacity cursor-pointer ${
                             inv.status === 'paid'
                               ? 'bg-green-100 text-green-700'
                               : 'bg-red-100 text-red-700'
                           }`}
                         >
                           Invoice #{inv.number}
-                        </span>
+                        </button>
                       ))}
                     </div>
                   )}
@@ -379,16 +416,17 @@ export function ReconciliationView({ projectId }: ReconciliationViewProps) {
                     {child.invoices.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1">
                         {child.invoices.map((inv, idx) => (
-                          <span
+                          <button
                             key={idx}
-                            className={`rounded px-1.5 py-0.5 text-xs ${
+                            onClick={() => onNavigateToInvoice?.(inv.number)}
+                            className={`rounded px-1.5 py-0.5 text-xs hover:opacity-80 transition-opacity cursor-pointer ${
                               inv.status === 'paid'
                                 ? 'bg-green-100 text-green-700'
                                 : 'bg-red-100 text-red-700'
                             }`}
                           >
                             Invoice #{inv.number}
-                          </span>
+                          </button>
                         ))}
                       </div>
                     )}

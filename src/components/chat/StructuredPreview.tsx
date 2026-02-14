@@ -37,11 +37,18 @@ interface WorkEntry {
 }
 
 interface StructuredPreviewProps {
-  type: "estimate" | "change_order" | "invoice" | "work_entry";
+  type: "estimate" | "change_order" | "invoice" | "work_entry" | "project";
   title?: string;
   lineItems?: LineItem[];
   workEntries?: WorkEntry[];
   notes?: string;
+  // Project-specific fields
+  projectName?: string;
+  customerName?: string;
+  address?: string;
+  description?: string;
+  customerEmail?: string;
+  customerPhone?: string;
   onApprove: (lineItems: LineItem[], title: string, notes: string) => void;
   onReject: () => void;
 }
@@ -52,6 +59,12 @@ export function StructuredPreview({
   lineItems: initialItems,
   workEntries: initialWorkEntries,
   notes: initialNotes,
+  projectName: initialProjectName,
+  customerName: initialCustomerName,
+  address: initialAddress,
+  description: initialDescription,
+  customerEmail: initialCustomerEmail,
+  customerPhone: initialCustomerPhone,
   onApprove,
   onReject,
 }: StructuredPreviewProps) {
@@ -63,6 +76,14 @@ export function StructuredPreview({
   const [expandedItems, setExpandedItems] = useState<Set<number>>(
     new Set((initialItems || []).map((_, idx) => idx).filter((idx) => (initialItems || [])[idx].isParent))
   );
+
+  // Project fields
+  const [projectName, setProjectName] = useState(initialProjectName || "");
+  const [customerName, setCustomerName] = useState(initialCustomerName || "");
+  const [address, setAddress] = useState(initialAddress || "");
+  const [description, setDescription] = useState(initialDescription || "");
+  const [customerEmail, setCustomerEmail] = useState(initialCustomerEmail || "");
+  const [customerPhone, setCustomerPhone] = useState(initialCustomerPhone || "");
 
   // Calculate subtotal (only root-level items to avoid double-counting hierarchy)
   const rootItems = items.filter((_, idx) => {
@@ -81,6 +102,7 @@ export function StructuredPreview({
     change_order: "Change Order",
     invoice: "Invoice",
     work_entry: "Work Summary",
+    project: "Project",
   };
 
   const updateItem = (index: number, updates: Partial<LineItem>) => {
@@ -145,7 +167,80 @@ export function StructuredPreview({
         />
       </div>
 
-      {type === "work_entry" ? (
+      {type === "project" ? (
+        <div className="p-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1.5">
+              Project Name <span className="text-destructive">*</span>
+            </label>
+            <input
+              type="text"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              className="w-full rounded-md border px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              placeholder="e.g., Kitchen Remodel - Smith Residence"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5">
+              Customer Name <span className="text-destructive">*</span>
+            </label>
+            <input
+              type="text"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              className="w-full rounded-md border px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              placeholder="e.g., John Smith"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Address</label>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              className="w-full rounded-md border px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              placeholder="e.g., 123 Main St, Anytown, CA 90210"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              className="w-full resize-none rounded-md border px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              placeholder="Brief project description..."
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Email</label>
+              <input
+                type="email"
+                value={customerEmail}
+                onChange={(e) => setCustomerEmail(e.target.value)}
+                className="w-full rounded-md border px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder="customer@example.com"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Phone</label>
+              <input
+                type="tel"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                className="w-full rounded-md border px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder="(555) 123-4567"
+              />
+            </div>
+          </div>
+        </div>
+      ) : type === "work_entry" ? (
         <div className="p-4 space-y-3">
           {workEntries.map((entry, idx) => (
             <div key={idx} className="rounded-lg border bg-muted/30 p-4">
@@ -362,21 +457,44 @@ export function StructuredPreview({
       )}
 
       <div className="p-4">
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Notes (optional)..."
-          rows={2}
-          className="mb-3 w-full resize-none rounded-md border px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
+        {type !== "project" && (
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Notes (optional)..."
+            rows={2}
+            className="mb-3 w-full resize-none rounded-md border px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        )}
         <div className="flex gap-2">
           <button
-            onClick={() => onApprove(items, title, notes)}
-            disabled={type === "work_entry" ? workEntries.length === 0 : (items.length === 0 || !title)}
+            onClick={() => {
+              if (type === "project") {
+                // For projects, pass project data through the notes parameter as JSON
+                const projectData = JSON.stringify({
+                  projectName,
+                  customerName,
+                  address,
+                  description,
+                  customerEmail,
+                  customerPhone,
+                });
+                onApprove([], "", projectData);
+              } else {
+                onApprove(items, title, notes);
+              }
+            }}
+            disabled={
+              type === "work_entry"
+                ? workEntries.length === 0
+                : type === "project"
+                  ? !projectName || !customerName
+                  : items.length === 0 || !title
+            }
             className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             <Check className="h-4 w-4" />
-            {type === "work_entry" ? "Record Work" : "Approve & Create"}
+            {type === "work_entry" ? "Record Work" : type === "project" ? "Create Project" : "Approve & Create"}
           </button>
           <button
             onClick={onReject}

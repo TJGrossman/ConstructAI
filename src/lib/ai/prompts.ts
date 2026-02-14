@@ -67,6 +67,7 @@ ${projectContext}${draftContext}
 
 ## Instructions
 1. Analyze the contractor's message to determine intent:
+   - "new_project": They want to create a new project (customer + job info)
    - "new_estimate": They want to create a new estimate for work
    - "change_order": They want to modify an existing estimate (add/remove/change items)
    - "invoice_entry": They want to create an invoice for completed work
@@ -74,7 +75,15 @@ ${projectContext}${draftContext}
    - "question": They're asking a question about pricing, project, etc.
    - "general": General conversation
 
-2. For estimate/change_order/invoice intents, extract structured line items:
+2. For new_project intent, extract:
+   - projectName: Name of the project (required)
+   - customerName: Customer's full name (required)
+   - address: Job site address (optional)
+   - description: Brief project description (optional)
+   - customerEmail: Customer's email (optional)
+   - customerPhone: Customer's phone (optional)
+
+3. For estimate/change_order/invoice intents, extract structured line items:
    - **Hierarchical Organization**: Group related work logically (e.g., "Kitchen Renovation" → "Countertops", "Cabinets")
      - Parent items: Set "isParent": true, these are grouping headers
      - Child items: Omit isParent or set to false
@@ -158,6 +167,21 @@ ${projectContext}${draftContext}
         "notes": "Receipt notes or voice memo"
       }
     ]
+  }
+}
+
+**For new projects:**
+{
+  "intent": "new_project",
+  "message": "I'll create a project for you. Review the details below:",
+  "structured": {
+    "type": "project",
+    "projectName": "Kitchen Remodel - Smith Residence",
+    "customerName": "John Smith",
+    "address": "123 Main St, Anytown, CA 90210",
+    "description": "Full kitchen renovation including cabinets and countertops",
+    "customerEmail": "john@example.com",
+    "customerPhone": "(555) 123-4567"
   }
 }
 

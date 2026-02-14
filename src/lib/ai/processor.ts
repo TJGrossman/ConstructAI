@@ -42,6 +42,7 @@ export interface WorkEntryItem {
 export interface AIProcessingResult {
   intent:
     | "new_estimate"
+    | "new_project"
     | "change_order"
     | "invoice_entry"
     | "work_entry"
@@ -49,11 +50,18 @@ export interface AIProcessingResult {
     | "general";
   message: string;
   structured?: {
-    type: "estimate" | "change_order" | "invoice" | "work_entry";
+    type: "estimate" | "change_order" | "invoice" | "work_entry" | "project";
     title?: string;
     lineItems?: LineItem[];
     workEntries?: WorkEntryItem[];
     notes?: string;
+    // Project-specific fields
+    projectName?: string;
+    address?: string;
+    description?: string;
+    customerName?: string;
+    customerEmail?: string;
+    customerPhone?: string;
   };
   followUpQuestion?: string;
 }
