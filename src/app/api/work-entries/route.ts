@@ -186,8 +186,8 @@ export async function POST(req: NextRequest) {
   // Get user's tax rate
   const user = await prisma.user.findUnique({ where: { id: userId } });
   const taxRate = Number(user?.defaultTaxRate || 0);
-  const taxAmount = subtotal * taxRate;
-  const total = subtotal + taxAmount;
+  const taxAmount = Math.round(subtotal * (taxRate / 100) * 100) / 100;
+  const total = Math.round((subtotal + taxAmount) * 100) / 100;
 
   // Update invoice totals
   await prisma.invoice.update({
