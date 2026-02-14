@@ -204,13 +204,14 @@ export default function ProjectDetailPage() {
     else if (entityType === "change_order") targetTab = "change-orders";
     else if (entityType === "invoice") targetTab = "invoices";
 
-    // Switch to the appropriate tab
-    setActiveTab(targetTab);
-    if (isMobile && targetTab !== "status" && targetTab !== "chat") {
+    // On mobile, desktop-only tabs (estimates, change-orders, invoices) redirect to history with filter
+    if (isMobile && (targetTab === "estimates" || targetTab === "change-orders" || targetTab === "invoices")) {
       setActiveTab("history");
       if (targetTab === "estimates") setHistoryFilter("estimates");
       else if (targetTab === "change-orders") setHistoryFilter("change-orders");
       else if (targetTab === "invoices") setHistoryFilter("invoices");
+    } else {
+      setActiveTab(targetTab);
     }
 
     // Highlight the item
